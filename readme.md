@@ -3379,3 +3379,4 @@ Seatbelt.exe -q UAC -computername=10.130.10.10 -username=hiboxy\bgreen -password
 
 Seatbelt rất hữu ích để thực hiện kiểm tra trên cả hệ thống cục bộ và hệ thống từ xa. Các bước kiểm tra được thiết kế để tìm ra những vấn đề có ích nhất cho người kiểm thử xâm nhập.
 
+
