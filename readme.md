@@ -3167,7 +3167,7 @@ Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Windows 10:
 ping 10.130.10.10
 ```
 
-![alt text](image.png)
+![alt text](IMG/LAB2/LAB2.6/image.png)
 
 ## Hướng dẫn thực hành từng bước
 
@@ -3186,7 +3186,7 @@ Seatbelt.exe
 
 Khi chạy Seatbelt, nó sẽ hiển thị hình ảnh dây an toàn bằng ký tự ASCII trên màn hình và cung cấp kết quả. Để tiết kiệm không gian màn hình (và vì nó sẽ không hiển thị tốt ở đây), chúng ta sẽ tắt hình ảnh bằng lệnh `-q` (quiet).
 
-![alt text](image-1.png)
+![alt text](IMG/LAB2/LAB2.6/image-1.png)
 
 ### 2. Kiểm tra đơn lẻ
 
@@ -3196,7 +3196,7 @@ Chúng ta có thể chạy các kiểm tra riêng lẻ bằng cách sử dụng 
 Seatbelt.exe -q AntiVirus
 ```
 
-![alt text](image-2.png)
+![alt text](IMG/LAB2/LAB2.6/image-2.png)
 
 Hãy cùng xem những gì đã được cài đặt trên hệ thống của chúng ta. Trong một bài kiểm thử xâm nhập thực tế, phần mềm trên một hệ thống có thể tương tự như trên các hệ thống khác. Chúng ta có thể sử dụng các lỗ hổng trong phần mềm đó để chuyển hướng tấn công giữa các hệ thống.
 
@@ -3204,7 +3204,7 @@ Hãy cùng xem những gì đã được cài đặt trên hệ thống của ch
 Seatbelt.exe -q InstalledProducts
 ```
 
-![alt text](image-3.png)
+![alt text](IMG/LAB2/LAB2.6/image-3.png)
 
 Bạn còn nhớ Icecast từ bài thực hành 2.2 chứ?
 
@@ -3216,7 +3216,7 @@ Chúng ta hãy cùng xem xét một hàm như vậy, `TcpConnections`.
 Seatbelt.exe -q TcpConnections
 ```
 
-![alt text](image-4.png)
+![alt text](IMG/LAB2/LAB2.6/image-4.png)
 
 ### 3. Groups
 
@@ -3242,7 +3242,7 @@ Hãy cùng xem xét hệ thống của chúng ta và phân tích kết quả c�
 Seatbelt.exe -q -group=system
 ```
 
-![alt text](image-5.png)
+![alt text](IMG/LAB2/LAB2.6/image-5.png)
 
 Nhóm này thực thi gần 50 lệnh khác nhau, bao gồm:
 
