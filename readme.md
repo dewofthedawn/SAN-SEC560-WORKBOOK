@@ -3147,3 +3147,235 @@ Trong ví dụ này, chúng ta đã sử dụng tệp `DLL`. Chúng ta cũng ho�
 
 Chúng tôi đã tạo ra một số payload khác nhau bằng Metasploit và Sliver. Như đã nói, Metasploit và MSFVenom cung cấp nhiều tùy chọn payload. Các framework C2 khác, chẳng hạn như Sliver, có bộ tùy chọn hạn chế hơn và yêu cầu người dùng tự tạo payload, thường là bằng shellcode từ framework C2.
 
+# Lab 2.6. Seatbelt
+
+## Tổng quan
+
+Chúng ta sẽ sử dụng Seatbelt để hiểu rõ hơn về cấu hình hệ thống Windows 10 của mình.
+
+Chúng tôi sẽ sử dụng máy ảo Windows 10.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Windows 10.
+
+Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Windows 10:
+
+```bash
+ping 10.130.10.10
+```
+
+![alt text](image.png)
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Khởi động Seatbelt.
+
+Theo trang web của dự án:
+
+> Seatbelt là một dự án C# thực hiện một số "kiểm tra an toàn" khảo sát máy chủ hướng đến bảo mật, có liên quan đến cả khía cạnh tấn công và phòng thủ.
+
+Mở cửa sổ dòng lệnh CMD, sau đó di chuyển đến thư mục `C:\Tool` tương sứng. Lưu ý, nếu bạn sử dụng PowerShell thay vì CMD, cú pháp của các lệnh sẽ thay đổi, vì vậy vui lòng sử dụng CMD.
+
+```bash
+cd \Tools
+Seatbelt.exe
+```
+
+Khi chạy Seatbelt, nó sẽ hiển thị hình ảnh dây an toàn bằng ký tự ASCII trên màn hình và cung cấp kết quả. Để tiết kiệm không gian màn hình (và vì nó sẽ không hiển thị tốt ở đây), chúng ta sẽ tắt hình ảnh bằng lệnh `-q` (quiet).
+
+![alt text](image-1.png)
+
+### 2. Kiểm tra đơn lẻ
+
+Chúng ta có thể chạy các kiểm tra riêng lẻ bằng cách sử dụng tên của lệnh cụ thể. Hãy chạy lệnh Seatbelt để lấy thông tin về phần mềm diệt virus hiện tại của chúng ta.
+
+```bash
+Seatbelt.exe -q AntiVirus
+```
+
+![alt text](image-2.png)
+
+Hãy cùng xem những gì đã được cài đặt trên hệ thống của chúng ta. Trong một bài kiểm thử xâm nhập thực tế, phần mềm trên một hệ thống có thể tương tự như trên các hệ thống khác. Chúng ta có thể sử dụng các lỗ hổng trong phần mềm đó để chuyển hướng tấn công giữa các hệ thống.
+
+```bash
+Seatbelt.exe -q InstalledProducts
+```
+
+![alt text](image-3.png)
+
+Bạn còn nhớ Icecast từ bài thực hành 2.2 chứ?
+
+Một số chức năng trong Seatbelt thực hiện các thao tác rất giống với các lệnh tích hợp sẵn. Lợi ích là chúng ta có thể tải tập tin .NET (exe) này vào bộ nhớ trên hệ thống mục tiêu và truy vấn các thông tin như Netstat, nhưng không cần sử dụng `cmd`, `PowerShell` hoặc các tệp thực thi `netstat`, vốn có thể bị giám sát quyền truy cập.
+
+Chúng ta hãy cùng xem xét một hàm như vậy, `TcpConnections`.
+
+```bash
+Seatbelt.exe -q TcpConnections
+```
+
+![alt text](image-4.png)
+
+### 3. Groups
+
+Thay vì chạy từng lệnh riêng lẻ, chúng ta có thể chạy các nhóm lệnh. Các nhóm lệnh hiện được Seatbelt hỗ trợ bao gồm:
+
+- `All` - tất cả các lệnh.
+
+- `User` - người dùng hiện tại hoặc tất cả người dùng nếu đang đăng nhập với quyền quản trị.
+
+- `System` - khai thác dữ liệu thú vị về hệ thống mục tiêu.
+
+- `Slack` - các mô-đun được thiết kế để trích xuất thông tin về Slack (đã cài đặt chưa, số lượt tải xuống và không gian làm việc).
+
+- `Chrome` -  trích xuất thông tin liên quan đến trình duyệt Chrome (đã cài đặt chưa, dấu trang, lịch sử).
+
+- `Remote` - các thao tác kiểm tra hoạt động trên hệ thống từ xa (rất hữu ích trước và trong quá trình di chuyển ngang)
+
+- `Misc` - các khoản kiểm tra linh tinh.
+
+Hãy cùng xem xét hệ thống của chúng ta và phân tích kết quả của nhóm Hệ thống.
+
+```bash
+Seatbelt.exe -q -group=system
+```
+
+![alt text](image-5.png)
+
+Nhóm này thực thi gần 50 lệnh khác nhau, bao gồm:
+
+```bash
+AMSIProviders
+AntiVirus
+AppLocker
+ARPTable
+AuditPolicies
+AuditSettings
+AutoRuns
+CredGuard
+DNSCache
+DotNet
+EnvironmentPath
+EnvironmentVariables
+InterestingProcesses
+InternetSettings
+LAPS
+LastShutdown
+LocalGPOs
+LocalGroups
+LocalUsers
+LogonSessions
+LSASettings
+NamedPipes
+NetworkProfiles
+NetworkShares
+NTLMSettings
+OSInfo
+PoweredOnEvents
+PowerShell
+Processes
+PSSessionSettings
+RDPSessions
+SCCM
+Services
+Sysmon
+TcpConnections
+TokenPrivileges
+UAC
+UdpConnections
+UserRightAssignments
+WindowsAutoLogon
+WindowsDefender
+WindowsEventForwarding
+WindowsFirewall
+WMIEventConsumer
+WMIEventFilter
+WMIFilterBinding
+WSUS
+```
+
+Đây là một cách nhanh chóng để thu thập nhiều dữ liệu về hệ thống mục tiêu để phân tích ngoại tuyến. Chúng ta hãy cùng xem xét nhanh một vài lệnh thú vị và cách chúng có thể hữu ích.
+
+- `AutoRuns` - Có thể các tệp thực thi hoặc cấu hình của chúng có thể được sửa đổi để duy trì hoạt động hoặc leo thang đặc quyền.
+
+- `InterestingProcesses` - Hữu ích để hiểu các công cụ phòng thủ và quản trị được cài đặt trên hệ thống.
+
+- `LocalGroups and LocalUsers` - Chúng có thể được sử dụng để leo thang quyền hạn hoặc duy trì quyền truy cập.
+
+- `LogonSessions` - Đây là danh sách những người dùng hiện đang đăng nhập. Chúng ta có thể sử dụng quyền truy cập của họ để di chuyển ngang hoặc leo thang đặc quyền.
+
+- `NetworkShares` - Hệ thống của chúng ta có đang chia sẻ thông tin hữu ích mà người khác có thể muốn/cần không? Chúng ta có thể thêm hoặc thay thế các tập tin để truy cập vào người dùng hoặc máy tính khác không?
+
+- `PowerShell` - Lệnh này cho phép chúng ta biết liệu các công nghệ phòng vệ cho PowerShell có được bật hay không. Nếu chúng không được bật, chúng ta có thể sử dụng các công cụ PowerShell. Nếu các biện pháp phòng vệ được bật, thì tốt nhất nên tránh sử dụng PowerShell để không gây ra cảnh báo.
+
+### 4. Remote Usage
+
+Giờ thì mọi thứ trở nên thú vị hơn nhiều! Chúng ta có thể sử dụng công cụ này để tìm hiểu về mục tiêu trước khi cố gắng khai thác nó hoặc di chuyển ngang sang mục tiêu. Windows sẽ tự động truyền mã thông báo người dùng hiện tại của chúng ta, hoặc chúng ta có thể chỉ định tên người dùng và mật khẩu bằng cách sử dụng `-username` và `-password`.
+
+Hãy nhớ rằng chúng ta đã tìm thấy một số thông tin đăng nhập trong bài thực hành 2.1. Chúng ta sẽ sử dụng `bgreen/Password1` để truy vấn một hệ thống khác nhằm lấy thông tin về hệ thống đó.
+
+Hãy nhớ rằng các lệnh có thể chạy từ xa đều có tiền tố là `+`. Chúng ta hãy xem xét các lệnh mà chúng ta có thể chạy từ xa để lấy thông tin từ các máy chủ khác.
+
+```bash
+Seatbelt.exe -q | findstr +
+```
+
+```bash
+C:\Tools>Seatbelt.exe -q | findstr +
+Available commands (+ means remote usage is supported):
+    + AMSIProviders          - Providers registered for AMSI
+    + AntiVirus              - Registered antivirus (via WMI)
+    + AuditPolicyRegistry    - Audit settings via the registry
+    + AutoRuns               - Auto run executables/scripts/programs
+    + DNSCache               - DNS cache entries (via WMI)
+    + DotNet                 - DotNet versions
+    + ExplorerRunCommands    - Recent Explorer "run" commands
+    + Hotfixes               - Installed hotfixes (via WMI)
+    + InterestingProcesses   - "Interesting" processes - defensive products and admin tools
+    + LAPS                   - LAPS settings, if installed
+    + LastShutdown           - Returns the DateTime of the last system shutdown (via the registry).
+    + LocalGroups            - Non-empty local groups, "-full" displays all groups (argument == computername to enumerate)
+    + LocalUsers             - Local users, whether they're active/disabled, and pwd last set (argument == computername to enumerate)
+    + LogonSessions          - Windows logon sessions
+    + LSASettings            - LSA settings (including auth packages)
+    + MappedDrives           - Users' mapped drives (via WMI)
+    + NetworkProfiles        - Windows network profiles
+    + NetworkShares          - Network shares exposed by the machine (via WMI)
+    + NTLMSettings           - NTLM authentication settings
+    + PowerShell             - PowerShell versions and security settings
+    + ProcessOwners          - Running non-session 0 process list with owners. For remote use.
+    + PSSessionSettings      - Enumerates PS Session Settings from the registry
+    + PuttyHostKeys          - Saved Putty SSH host keys
+    + PuttySessions          - Saved Putty configuration (interesting fields) and SSH host keys
+    + RDPSavedConnections    - Saved RDP connections stored in the registry
+    + RDPSessions            - Current incoming RDP sessions (argument == computername to enumerate)
+    + SCCM                   - System Center Configuration Manager (SCCM) settings, if applicable
+    + ScheduledTasks         - Scheduled tasks (via WMI) that aren't authored by 'Microsoft', "-full" dumps all Scheduled tasks
+    + Sysmon                 - Sysmon configuration from the registry
+    + UAC                    - UAC system policies via the registry
+    + WindowsAutoLogon       - Registry autologon information
+    + WindowsDefender        - Windows Defender settings (including exclusion locations)
+    + WindowsEventForwarding - Windows Event Forwarding (WEF) settings via the registry
+    + WindowsFirewall        - Non-standard firewall rules, "-full" dumps all (arguments == allow/deny/tcp/udp/in/out/domain/private/public)
+    + WSUS                   - Windows Server Update Services (WSUS) settings, if applicable
+```
+
+Hãy chạy mô-đun UAC này trên hệ thống `10.130.10.10`.
+
+```bash
+Seatbelt.exe -q UAC -computername=10.130.10.10 -username=hiboxy\bgreen -password=Password1
+
+# lỗi
+```
+
+
+> Như ta thấy, UAC đã được bật và chúng ta cần tài khoản Quản trị viên tích hợp sẵn (RID 500) để di chuyển ngang.
+>
+>Nếu bạn có thêm thời gian, hãy chạy thử một số mô-đun khác trên hệ thống từ xa này.
+
+## Kết luận
+
+Seatbelt rất hữu ích để thực hiện kiểm tra trên cả hệ thống cục bộ và hệ thống từ xa. Các bước kiểm tra được thiết kế để tìm ra những vấn đề có ích nhất cho người kiểm thử xâm nhập.
+
