@@ -3362,21 +3362,199 @@ Available commands (+ means remote usage is supported):
     + WSUS                   - Windows Server Update Services (WSUS) settings, if applicable
 ```
 
-Hãy chạy mô-đun UAC này trên hệ thống `10.130.10.10`.
+Hãy chạy mô-đun UAC này trên hệ thống `10.130.10.25`.
 
 ```bash
-Seatbelt.exe -q UAC -computername=10.130.10.10 -username=hiboxy\bgreen -password=Password1
+# Seatbelt.exe -q UAC -computername=10.130.10.25 -username=hiboxy\bgreen -password=Password1
 
-# lỗi
+Seatbelt.exe -q UAC -computername=10.130.10.25
 ```
 
+Chúng ta có thể thấy rằng UAC đang được bật, và chúng ta cần tài khoản `Administrator built-in (RID 500)` để thực hiện `lateral movement`.
 
-> Như ta thấy, UAC đã được bật và chúng ta cần tài khoản Quản trị viên tích hợp sẵn (RID 500) để di chuyển ngang.
->
->Nếu bạn có thêm thời gian, hãy chạy thử một số mô-đun khác trên hệ thống từ xa này.
+Nếu bạn còn thời gian, hãy chạy một số module khác đối với hệ thống từ xa này.
+
+
+![alt text](IMG/LAB2/LAB2.6/image-6.png)
 
 ## Kết luận
 
 Seatbelt rất hữu ích để thực hiện kiểm tra trên cả hệ thống cục bộ và hệ thống từ xa. Các bước kiểm tra được thiết kế để tìm ra những vấn đề có ích nhất cho người kiểm thử xâm nhập.
 
+# Lab 3.1. Windows Privilege Escalation
+
+## Mục tiêu
+
+- Chúng ta sẽ sử dụng beRoot.exe và PowerUp để tìm các vấn đề leo thang đặc quyền cục bộ.
+
+- Chúng tôi sẽ lợi dụng lỗ hổng cấu hình dịch vụ Windows để leo thang đặc quyền cục bộ.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Windows 10.
+
+Bạn chỉ cần khởi động máy ảo Windows cho bài thực hành này.
+
+Trong trường hợp bạn đã từng thực hiện thí nghiệm này trước đây, hãy cùng nhau dọn dẹp nhanh một chút.
+
+Mở cửa sổ lệnh CMD với quyền quản trị bằng cách nhấp vào liên kết trên màn hình máy tính của bạn có tên `Command Prompt - Run as Administrator`, sau đó nhập lệnh sau:
+
+```bash
+net localgroup administrators john /del
+net user john /del
+del "C:\Program Files\VideoStream\1337.exe"
+```
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Đăng nhập vào Windows
+
+Đăng xuất khỏi Windows. Nhấp vào menu Bắt đầu, nhấp vào biểu tượng đầu và vai ở phía trên cùng bên trái, sau đó nhấp vào "Đăng xuất".
+
+Đăng nhập vào máy tính Windows bằng thông tin đăng nhập bên dưới:
+
+- Tên người dùng: `notadmin`.
+
+- Mật khẩu: `notadmin`.
+
+Đây là tài khoản người dùng thông thường không có quyền quản trị. Chúng tôi không sử dụng tài khoản `sec560` này vì tài khoản hiện tại đã có quyền quản trị cục bộ.
+
+### 2. Chạy beRoot.exe
+
+Công cụ đầu tiên chúng ta sẽ sử dụng để kiểm tra các vấn đề leo thang đặc quyền là `beRoot.exe`. Để chạy `beRoot.exe`, vui lòng mở cửa sổ dòng lệnh thông thường và chạy các lệnh sau, và đừng lo lắng nếu cuối kết quả có một số lỗi:
+
+```bash
+cd C:\Tools\BeRoot
+beRoot.exe
+```
+
+![alt text](IMG/LAB3/LAB3.1/image.png)
+
+### 3. Xem xét kết quả của beRoot
+
+beRoot.exe cung cấp phản hồi ngay lập tức và sẽ hiển thị cho bạn một số vấn đề có thể dẫn đến leo thang đặc quyền. Nó sẽ xác định vấn đề đường dẫn dịch vụ không được trích dẫn với một dịch vụ có tên là `Video Stream`.
+
+Đường dẫn của dịch vụ là `C:\Program Files\VideoStream\1337 Log\checklog.exe`, nhưng đường dẫn nhị phân của dịch vụ lại không có dấu ngoặc kép! Có rất nhiều thông tin đầu ra. Hãy cuộn lên đầu trang để tìm thông tin được hiển thị bên dưới.
+
+![alt text](IMG/LAB3/LAB3.1/image-1.png)
+
+Việc thiếu dấu ngoặc kép trong biến môi trường PATH là tin tốt cho kẻ tấn công!
+
+### 4. Chạy PowerUp.ps1
+
+Bây giờ chúng ta hãy thử kịch bản PowerShell `PowerUp.ps1`. PowerUp hiện là một phần của PowerShell Empire và là một trong những cơ chế chính được sử dụng để thực hiện leo thang đặc quyền cục bộ. Đây là một kịch bản PowerShell thuần túy và do đó có cơ hội chạy trên máy mục tiêu cao hơn so với beRoot.exe. Trong trường hợp sau, có khả năng tệp thực thi beRoot.exe của bạn bị chặn do kiểm soát ứng dụng, chẳng hạn.
+
+Để khởi chạy `PowerUp.ps1`, hãy mở cửa sổ PowerShell và chạy các lệnh sau. Khi được nhắc, nhấn Enter R để chạy tập lệnh (Run once).
+
+```bash
+cd C:\Tools
+Import-Module .\PowerUp.ps1
+R
+```
+
+![alt text](IMG/LAB3/LAB3.1/image-2.png)
+
+Bây giờ, chúng ta hãy tiến hành kiểm tra.
+
+```bash
+Invoke-AllChecks
+```
+
+![alt text](IMG/LAB3/LAB3.1/image-3.png)
+
+Lệnh này sẽ mất vài giây, vì PowerUp.ps1 sẽ thực hiện tất cả các bước kiểm tra nâng cao quyền.
+
+PowerUp sẽ tìm thấy một số thứ mà beRoot không tìm thấy. Hãy cẩn thận với những kết quả sai lệch khi chỉ sử dụng một công cụ!
+
+### 5. Xem xét kết quả của PowerUp
+
+PowerUp có thể sẽ trả về một vài kết quả thú vị:
+
+- Đường dẫn dịch vụ không được trích dẫn cho dịch vụ `Video Stream` (như được xác định bởi BeRoot.exe)
+
+- Một số lỗ hổng có thể dẫn đến tấn công chiếm quyền điều khiển DLL trong thư mục `%PATH%`.
+
+- Một số lỗ hổng liên quan đến các tệp thực thi dịch vụ và quyền truy cập.
+
+![alt text](IMG/LAB3/LAB3.1/image-5.png)
+
+Kết quả của cả beRoot.exe và PowerUp đều cần được kiểm tra thủ công, vì đôi khi chúng hiểu sai các quyền lồng nhau, chẳng hạn. Hãy thử khai thác các vấn đề đã được báo cáo!
+
+### 6. Xem lại dịch vụ 'Video Stream' trong mục dịch vụ.
+
+Trong cửa sổ dòng lệnh beRoot, hãy mở cửa sổ services.msc:
+
+```bash
+services.msc
+```
+
+Trong danh sách dịch vụ, cuộn xuống Video Streamdịch vụ đó và nhấp đúp vào. Bạn sẽ thấy thông tin chi tiết liên quan đến dịch vụ Video Stream và lưu ý rằng đường dẫn đến tệp thực thi không có dấu ngoặc kép.
+
+Hãy tận dụng điều đó!
+
+![alt text](IMG/LAB3/LAB3.1/image-4.png)
+
+### 7. Khai thác lỗ hổng bằng PowerUp
+
+PowerUp cung cấp một cách tiện lợi để khai thác các lỗ hổng đã được xác định. Nếu bạn xem xét các mục được PowerUp báo cáo, bạn sẽ nhận thấy rằng nó bao gồm một thẻ `AbuseFunction`, cung cấp cú pháp sao chép-dán dễ dàng để thử khai thác các vấn đề đã được xác định.
+
+Để thử cách này với dịch vụ Video Stream dễ bị tổn thương, chúng ta cần cuộn lên một chút đến vài kết quả được báo cáo đầu tiên và sao chép thông `AbuseFunctiontin` được báo cáo: `Write-ServiceBinary -ServiceName 'Video Stream' -Path <HijackPath>`.
+
+Vui lòng sao chép và dán chuỗi này vào cửa sổ dòng lệnh PowerShell. Vui lòng chưa nhấn ENTER!
+
+### 8. Điều chỉnh "HijackPath"
+
+Chúng ta đang lạm dụng vấn đề đường dẫn dịch vụ không được trích dẫn đã được giải thích trong khóa học. Vì tệp thực thi dịch vụ thực tế nằm trong thư mục `C:\Program Files\VideoStream\1337 Log\` và không có khoảng trắng xung quanh đường dẫn đầy đủ, Windows cũng sẽ cố gắng thực thi `C:\Program.exe` hoặc `C:\Program Files\VideoStream\1337.exe`.
+
+Bây giờ chúng ta hãy điều chỉnh "HijackPath" và trỏ nó đến một tệp thực thi có thể ghi được:
+
+```bash
+Write-ServiceBinary -ServiceName 'Video Stream' -Path 'C:\Program Files\VideoStream\1337.exe'
+```
+
+![alt text](IMG/LAB3/LAB3.1/image-6.png)
+
+Lệnh PowerUp ở trên sẽ ghi một tệp thực thi độc hại vào vị trí được chỉ định! Sau khi chạy lệnh AbuseFunction, bạn sẽ thấy tệp thực thi do PowerShell ghi sẽ tạo ra một người dùng có tên là `john` với mật khẩu là `Password123!`. Sau đó, người dùng này sẽ được thêm vào nhóm quản trị viên cục bộ.
+
+### 9. Khởi động lại máy tính
+
+Sau khi chức năng chống lạm dụng PowerShell chạy xong, hãy kiểm tra xem tệp `C:\Program Files\VideoStream\1337.exe` có tồn tại hay không. Nếu có, chúng ta cần khởi động lại dịch vụ để tệp thực thi được chạy với quyền `NT AUTHORITY\SYSTEM`.
+
+Vì đây là dịch vụ tự khởi động, giải pháp khá đơn giản: khởi động lại hệ thống!
+
+### 10. Đăng nhập vào Windows
+
+Đăng nhập vào máy tính Windows của chúng tôi bằng thông tin đăng nhập người dùng của chúng tôi:
+
+- Tên người dùng: `notadmin`.
+
+- Mật khẩu: `notadmin`.
+
+### 11. Xác nhận người dùng đã được thêm
+
+Hãy xác nhận xem người dùng `john` đã được tạo và thêm vào nhóm quản trị viên cục bộ chưa. Để xác minh điều này, hãy chạy các lệnh sau trong cửa sổ dòng lệnh:
+
+```bash
+net users
+```
+
+![alt text](IMG/LAB3/LAB3.1/image-7.png)
+
+```bash
+net localgroup Administrators
+```
+
+![alt text](IMG/LAB3/LAB3.1/image-8.png)
+
+Chúc mừng! Chúng ta vừa nâng cấp từ người dùng không có quyền quản trị lên người dùng có quyền quản trị cục bộ!
+
+Nếu muốn, bạn có thể đăng xuất khỏi tài khoản hiện tại rồi đăng nhập bằng tài khoản mới `john`, tài khoản này hiện là thành viên của nhóm Quản trị viên cục bộ.
+
+Khi hoàn thành, hãy đăng xuất khỏi tài khoản người dùng `notadmin` (hoặc `john`) và đăng nhập lại vào tài khoản người dùng `sec560` để chuẩn bị cho bài thực hành tiếp theo. Mật khẩu mặc định cho tài khoản `sec560` là sec560, trừ khi bạn đã thay đổi nó.
+
+## Phần kết luận
+
+Chúng tôi đã xác định cách phát hiện và khai thác các lỗ hổng leo thang đặc quyền cục bộ bằng cách sử dụng beRoot và PowerUp. Sử dụng các công cụ này, chúng tôi đã có thể leo thang đặc quyền và tạo một người dùng mới trên hệ thống với quyền quản trị.
 
