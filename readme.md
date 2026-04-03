@@ -4583,3 +4583,246 @@ Chúng ta vừa thấy cách tạo ra các từ điển chuyên biệt về tên
 Trong bài thực hành này, chúng tôi đã sử dụng John để bẻ khóa mật khẩu Windows và Linux, và chúng tôi đã phân tích john.pottệp tin để xem John lưu trữ các mật khẩu đã được bẻ khóa thành công như thế nào. Mỗi kỹ thuật này đều hữu ích cho các chuyên gia kiểm thử xâm nhập để phân biệt mật khẩu và sử dụng chúng để có được quyền truy cập sâu hơn vào môi trường mục tiêu.
 
 Ngoài ra, chúng tôi đã sử dụng Hashcat để bẻ khóa mật khẩu băm trên Windows và Linux, phân tích một số đặc điểm hiệu năng của Hashcat và so sánh chúng với John the Ripper. Đối với một bài kiểm thử xâm nhập, người kiểm thử nên đánh giá hiệu năng của John the Ripper và Hashcat trên phần cứng hiện có và xác định công cụ nào sẽ bẻ khóa mật khẩu nhanh hơn đối với các loại băm cụ thể gặp phải trong bài kiểm thử. Chúng tôi cũng đã xem xét cách áp dụng các quy tắc biến đổi từ ngữ vào các lần chạy Hashcat và cách tận dụng tên người dùng và mật khẩu đã bị bẻ khóa để tạo ra các từ điển mật khẩu tiềm năng mới cho Hashcat. Mỗi kỹ thuật này đều rất hữu ích trong kiểm thử xâm nhập thực tế.
+
+# Lab 3.6. Responder
+
+## Mục tiêu
+
+- Để có được phản hồi thách thức NTLMv2 bằng cách lạm dụng LLMNR (sử dụng Responder)
+
+- Để phá vỡ xác thực phản hồi NTLMv2 bằng cách sử dụng John The Ripper, hãy cung cấp cho chúng tôi một bộ thông tin đăng nhập hợp lệ.
+
+- Để theo dõi quá trình trao đổi thử thách/phản hồi NTLMv2 qua SMB
+
+- Sử dụng John the Ripper và hashcat để xác định mật khẩu từ các thông điệp xác thực NTLMv2 đã bị thu thập.
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+- Windows 10.
+
+Bạn cần khởi động máy ảo Slingshot Ubuntu và Windows cho bài thực hành này. Từ máy ảo Slingshot Ubuntu, chúng ta sẽ sử dụng Responder để "tấn công" máy ảo Windows. Từ đây, mục tiêu của chúng ta là thu thập thông tin Thử thách/Phản hồi NTLMv2 và thử tấn công vét cạn ngoại tuyến. Vì Responder sử dụng multicast (và chúng ta muốn tránh việc sinh viên ảnh hưởng đến các sinh viên khác), nên các bộ điều hợp mạng VMware cho cả máy ảo Linux và Windows của bạn cần được thiết lập thành NAT (như đã giải thích ở Ngày 1) trước khi bắt đầu bài thực hành này.
+
+Để đảm bảo điều này hoạt động đúng cách, hãy kiểm tra xem bạn có thể ping từ Linux sang Windows hay không.
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Khởi động ứng dụng Responder
+
+Hãy mở cửa sổ dòng lệnh trong Linux. Để chạy Responder, chúng ta cần quyền root, vì vậy hãy sử dụng lệnh sudođể nâng quyền lên root. Responder nằm trong thư mục `/opt/responder`.
+
+```bash
+sudo /opt/responder/Responder.py -I eth0
+```
+
+![alt text](IMG/LAB3/LAB3.6/image.png)
+
+![alt text](IMG/LAB3/LAB3.6/image-1.png)
+
+![alt text](IMG/LAB3/LAB3.6/image-2.png)
+
+Responder sẽ cung cấp một đầu ra khá chi tiết. Bạn sẽ thấy một vài cảnh báo, mà bạn có thể bỏ qua một cách an toàn. Ví dụ, nó sẽ cho biết không thể bắt đầu lắng nghe trên một số cổng nhất định, vì chúng đã được sử dụng bởi các dịch vụ/ứng dụng khác trên máy Linux của bạn. Bạn có thể bỏ qua các lỗi; chúng ta không cần tất cả các mô-đun phải hoạt động. Bạn sẽ thấy một vài điều đáng chú ý:
+
+Responder sẽ cung cấp một đầu ra khá chi tiết. Bạn sẽ thấy một vài cảnh báo, mà bạn có thể bỏ qua một cách an toàn. Ví dụ, nó sẽ cho biết không thể bắt đầu lắng nghe trên một số cổng nhất định, vì chúng đã được sử dụng bởi các dịch vụ/ứng dụng khác trên máy Linux của bạn. Bạn có thể bỏ qua các lỗi; chúng ta không cần tất cả các mô-đun phải hoạt động. Bạn sẽ thấy một vài điều đáng chú ý:
+
+- `Poisoners`: Bạn sẽ thấy các kỹ thuật đầu độc được sử dụng, bao gồm LLMNR, NBNS (NBT-NS) và DNS/MDNS.
+
+- `Servers`: Chúng ta sẽ nhắm mục tiêu vào các máy chủ SMB (Doanh nghiệp vừa và nhỏ) cho cuộc tấn công này.
+
+- `Interface`: Chúng tôi đã chỉ định eth0giao diện với-I
+
+Sau khi in ra các cảnh báo khác nhau, Responder nên kết thúc bằng cách in ra "Listening for events...".
+
+### 2. Chuyển sang máy tính chạy hệ điều hành Windows.
+
+Bây giờ chúng ta hãy chuyển sang máy tính Windows "nạn nhân" của chúng ta.
+
+Đăng xuất khỏi máy ảo Windows của bạn. Nhấp vào biểu tượng Windows ở góc dưới bên trái, sau đó nhấp vào biểu tượng người dùng (hình đầu và vai nhỏ). Sau đó nhấp vào 'Đăng xuất'.
+
+Sau đó, hãy đăng nhập bằng thông tin đăng nhập bên dưới:
+
+- Tên người dùng: `clark`.
+
+- Mật khẩu: `Qwerty12`.
+
+> Đổi mật khẩu lại thành 1234@abcd.
+
+### 3. Mở cửa sổ Explorer.
+
+Hãy mở một cửa sổ Explorer và thử thiết lập kết nối SMB đến một hệ thống không tồn tại. Hãy nhớ rằng, thao tác này sẽ kích hoạt yêu cầu LLMNR, vì máy Windows sẽ cố gắng phân giải tên máy chủ bằng yêu cầu LLMNR đa hướng. Responder sẽ phản hồi lại những loại yêu cầu này!
+
+Ví dụ, chúng ta có thể thử mở một phiên SMB tới `\\WINDOWS01`. Bạn có thể làm điều này bằng cách mở cửa sổ Explorer, nhập `\\WINDOWS01` vào thanh địa chỉ và nhấn Enter; kết nối sẽ bị treo trong vài giây, sau đó sẽ trả về "Truy cập bị từ chối" và yêu cầu thông tin đăng nhập.
+
+Điều quan trọng cần lưu ý là, tại thời điểm này, máy tính Windows của bạn đã cố gắng đăng nhập bằng thông tin đăng nhập của phiên Windows hiện tại. Do đó, Responder lẽ ra đã có thể nhận được phản hồi xác thực NTLMv2...
+
+![alt text](IMG/LAB3/LAB3.6/image-3.png)
+
+Sau khi Windows xác thực một số lần, bạn sẽ thấy hộp thoại này. Bạn chỉ cần đóng nó lại; chúng ta đã lấy được các mã băm rồi!
+
+![alt text](IMG/LAB3/LAB3.6/image-6.png)
+
+### 4. Xem lại mã băm thử thách/phản hồi NTLMv2
+
+Hãy quay lại máy ảo Slingshot Linux để chúng ta có thể quan sát xem nỗ lực của mình có thành công hay không!
+
+Trong cửa sổ nơi Responder đang chạy, bạn sẽ thấy rằng một phản hồi thử thách NTLMv2 đã được thu thập (xem ảnh chụp màn hình để biết ví dụ về giao diện đó). Nếu bạn không thấy ngay lập tức, bạn có thể cần cuộn lên trong cửa sổ. Mục nhập sẽ hiển thị rõ ràng mã băm dành cho clarkvà được thu thập từ máy tính Windows của bạn.
+
+![alt text](IMG/LAB3/LAB3.6/image-5.png)
+
+Sau khi thấy mã băm, bạn có thể thoát Responder bằng cách nhấn phím CTRL+C.
+
+Bạn sẽ thấy rằng Responder đã làm sai lệch phản hồi cho `windows01.local` và `windows01` cả mã băm đã thu được. Bạn cũng sẽ thấy thông báo rằng Responder đã nhận được một mã băm khác từ cùng một người dùng, nhưng không hiển thị nó trên màn hình.
+
+### 5. Sử dụng John The Ripper để giải mã băm thu được.
+
+Điều quan trọng cần lưu ý là sự khác biệt giữa hàm băm NTLM và hàm băm NetNTLMv2:
+
+Mã băm NTLM (hoặc mã băm NT) là mã băm MD4 không thêm muối của mật khẩu, được Windows sử dụng để lưu trữ mật khẩu trong tệp SAM (người dùng cục bộ) hoặc trong tệp NTDS.dit (người dùng miền). Loại mã băm này có thể được sử dụng trong cuộc tấn công Pass-the-Hash !
+
+Mã băm NetNTLMv2 là một dạng phản hồi-thử thách có thể được sử dụng để thực hiện tấn công vét cạn ngoại tuyến. Loại mã băm này không thể được sử dụng trong tấn công Pass-the-Hash, nhưng có khả năng được sử dụng trong tấn công SMB Relaying !
+
+Theo mặc định, các mã băm được Responder thu thập sẽ được lưu vào một tệp .txt /opt/responder/logsvới tên tương tự như tên tệp bên dưới. Do đó, tên tệp thực tế của bạn sẽ phụ thuộc vào địa chỉ IP của máy tính Windows của bạn.
+
+Chúng ta cần chỉ định loại hàm băm mà John nhắm đến (NetNTLMv2), điều này có thể thực hiện bằng cách sử dụng cờ `Điều quan trọng cần lưu ý là sự khác biệt giữa hàm băm NTLM và hàm băm NetNTLMv2:
+
+Mã băm NTLM (hoặc mã băm NT) là mã băm MD4 không thêm muối của mật khẩu, được Windows sử dụng để lưu trữ mật khẩu trong tệp SAM (người dùng cục bộ) hoặc trong tệp NTDS.dit (người dùng miền). Loại mã băm này có thể được sử dụng trong cuộc tấn công Pass-the-Hash !
+
+Mã băm NetNTLMv2 là một dạng phản hồi-thử thách có thể được sử dụng để thực hiện tấn công vét cạn ngoại tuyến. Loại mã băm này không thể được sử dụng trong tấn công Pass-the-Hash, nhưng có khả năng được sử dụng trong tấn công SMB Relaying !
+
+Theo mặc định, các mã băm được Responder thu thập sẽ được lưu vào một tệp .txt `/opt/responder/logs` với tên tương tự như tên tệp bên dưới. Do đó, tên tệp thực tế của bạn sẽ phụ thuộc vào địa chỉ IP của máy tính Windows của bạn.
+
+Chúng ta cần chỉ định loại hàm băm mà John nhắm đến (NetNTLMv2), điều này có thể thực hiện bằng cách sử dụng cờ `--format`:
+
+```bash
+john --format=netntlmv2 /opt/responder/logs/SMB-NTLMv2-SSP-*
+```
+
+![alt text](IMG/LAB3/LAB3.6/image-7.png)
+
+John sẽ bắt đầu tấn công vét cạn các mã băm được cung cấp ngay lập tức. Trong trường hợp cụ thể của chúng ta, việc bẻ khóa sẽ cực kỳ nhanh! Điều này là do John trước tiên thử một số mật khẩu "dễ đoán" (chẳng hạn như tên người dùng). Vì tài khoản người dùng clark của chúng ta sử dụng "Qwerty12" làm mật khẩu, chúng ta sẽ thấy mật khẩu khá nhanh ("Qwerty12" là một phần của từ điển mà chúng ta đang sử dụng).
+
+Một điều quan trọng cần lưu ý là John không "giải mã lại" các mã băm. Nếu nó đã giải mã một mã băm nào đó, nó sẽ chỉ thông báo cho bạn rằng nó không tải bất kỳ mã băm nào khi cố gắng giải mã chúng lần nữa.
+
+Để xem các mã băm đã được giải mã, chúng ta có thể sử dụng hàm `show` của John:
+
+```bash
+john --show /opt/responder/logs/SMB-NTLMv2-SSP-*.txt
+```
+
+Lệnh này tìm kiếm john.potcác mã băm bên trong tệp `SMBv2-NTLMv2-SSP-*` để có thể in ra mật khẩu liên kết với người dùng.
+
+![alt text](IMG/LAB3/LAB3.6/image-8.png)
+
+
+### 6. Đăng xuất khỏi tài khoản clark, đăng nhập lại với tên sec560
+
+Đăng xuất khỏi máy tính Windows của bạn (clark). Sau đó, đăng nhập lại với tư cách người dùng khác sec560.
+
+Chúc mừng! Bạn đã giải mã thành công thử thách phản hồi NetNTLMv2!
+
+### 7. Thu thập mã băm bằng phần mềm bắt gói tin (sniffer)
+
+Đối với bài thực hành này, hãy chuyển sang máy Linux của bạn và gọi lệnh `smbclient` để truy cập máy ảo Windows qua SMB. Chỉ cần nhập tên người dùng và mật khẩu giả để chúng ta không thể xác thực thành công. Trong khi quá trình trao đổi diễn ra, chúng ta sẽ chạy `tcpdump` trên Linux để theo dõi gói tin, sau đó chúng ta có thể bẻ khóa nó.
+
+Phòng thí nghiệm này mô phỏng một số kịch bản khác nhau, một vài trong số đó được nêu dưới đây:
+
+- 1: Kẻ tấn công có vị thế "kẻ trung gian" và chiếm đoạt thông tin xác thực.
+
+- 2: Kẻ tấn công chạy một dịch vụ và chờ đợi trình quét lỗ hổng kết nối với dịch vụ đó.
+
+- 3: Kẻ tấn công có thể khiến người dùng cố gắng gắn kết một thư mục chia sẻ trên máy tính do kẻ tấn công kiểm soát.
+
+Mở máy ảo Slingshot Linux của bạn. Tại đây, trước tiên chúng ta sẽ chạy `tcpdump` trình bắt gói tin để thu thập các gói tin liên quan đến quá trình xác thực. Bạn cần hai cửa sổ terminal: một để `tcpdump` bắt gói tin và một để smbclientthực hiện xác thực với Windows. Khởi chạy hai cửa sổ terminal.
+
+Trong một cửa sổ terminal, hãy chạy lệnh `tcpdump` sau:
+
+```bash
+sudo tcpdump -nv -w /tmp/winauth.pcap port 445
+```
+
+Tùy chọn `-n` này cho phép hiển thị các cổng và địa chỉ IP dạng số thay vì tên cổng và tên máy chủ, trong khi tùy vchọn khác `tcpdump` in ra số lượng gói tin đã nhận được cho đến nay. Tùy chọn `-w` này khiến `tcpdump` chương trình ghi các gói tin vào một tệp ghi lại gói tin. Chúng ta sẽ chỉ tập trung vào các gói tin liên quan đến cổng 445.
+
+Trong khi `tcpdump` chương trình đang chạy, hãy mở một cửa sổ dòng lệnh khác `smbclient` và thực hiện xác thực với máy ảo Windows của bạn.
+
+Để mô phỏng quá trình xác thực người dùng, chúng ta sẽ xác thực vào máy ảo Windows với tư cách người dùng `clark` có mật khẩu `Qwerty12`. Trong cửa sổ terminal Linux khác, hãy nhập:
+
+```bash
+ smbclient //10.130.10.25/c$ -U clark 1234@abcd
+```
+
+Thông tin đăng nhập này không hợp lệ cho hệ thống này. Tuy nhiên, nếu chúng ta có thể khôi phục thông tin đăng nhập này, chúng ta có thể sử dụng nó trên các hệ thống khác mà người dùng có quyền truy cập. Tất nhiên, nếu thông tin đăng nhập hoạt động bình thường, chúng ta có thể sử dụng nó ngay lập tức.
+
+Khi bạn nhấn phím `Enter` trong Linux để chạy `smbclient` lệnh, bạn sẽ thấy một biểu tượng `LOGON_FAILURE`. Quan trọng hơn, `tcpdump` trình bắt gói tin của bạn trong cửa sổ khác sẽ hiển thị rằng bạn đã bắt được một số gói tin. Bạn sẽ thấy nó chỉ ra rằng nó có `Got XX gói tin`, trong đó XX sẽ là 11 hoặc nhiều hơn.
+
+> Bạn phải thoát khỏi tcpdump. Bạn phải nhấn phím `CTRL-C` trong `tcpdump` cửa sổ terminal, nếu không tcpdumpcác gói dữ liệu sẽ không được ghi vào tệp ghi lại. Chúng ta đã thu thập được các gói dữ liệu.
+
+
+## 8: Trích xuất mã băm từ tệp Pcap
+
+Chúng tôi sẽ sử dụng PCredzcông cụ này để trích xuất các mã băm mật khẩu từ tệp pcap. Công cụ này có thể trích xuất "Số thẻ tín dụng, NTLM (DCE-RPC, HTTP, SQL, LDAP, v.v.), Kerberos (AS-REQ Pre-Auth etype 23), HTTP Basic, SNMP, POP, SMTP, FTP, IMAP, v.v. từ tệp pcap hoặc từ giao diện trực tiếp."
+
+Công cụ PCredz có những quy định cụ thể về vị trí và cách thức chạy. Chúng ta cần chạy nó từ thư mục chứa tệp Pcredzthực thi.
+
+> Lưu ý: Tệp thực thi có tên là Pcredznhưng công cụ được gọi là PCredz(lưu ý sự thay đổi chữ hoa chữ thường của chữ "C"). Từ giờ trở đi, chúng ta sẽ gọi nó bằng tên tệp thực thi, Pcredz.
+
+Giờ thì hãy chạy Pcredz và trích xuất mã băm!
+
+```bash
+sudo Pcredz -vf /tmp/winauth.pcap
+```
+
+![alt text](IMG/LAB3/LAB3.6/image-9.png)
+
+Chúng ta thấy mã băm trên màn hình, và lệnh trước đó tạo ra một tệp có tên `/opt/pcredz/CredentialDump-Session.log` chứa tất cả các kết quả đầu ra ở trên. Ngoài ra, công cụ này còn tạo các tệp trong thư mục `/opt/pcredz/logs/` có tên tương ứng với các loại mã băm tìm thấy.
+
+Hãy cùng xem tệp chứa các mã băm trong `logs` thư mục đó.
+
+```bash
+ls /opt/pcredz/logs/
+cat /opt/pcredz/logs/NTLMv2.txt
+```
+
+![alt text](IMG/LAB3/LAB3.6/image-10.png)
+
+Chúng ta đã có mã băm ở định dạng phù hợp để có thể sử dụng nó `john` để giải mã.
+
+```bash
+john /opt/pcredz/logs/NTLMv2.txt
+```
+
+![alt text](IMG/LAB3/LAB3.6/image-12.png)
+
+John đã tìm thấy mật khẩu trong danh sách mật khẩu của nó tại địa chỉ `/usr/local/share/john/password.lst`.
+
+Ngoài ra, chúng ta cũng có thể sử dụng hashcat để giải mã băm NETNTLMv2 này:
+
+```bash
+hashcat -w 3 -a 0 -m 5600 /opt/pcredz/logs/NTLMv2.txt /opt/passwords/rockyou.txt
+```
+
+Sau đó, hãy xem mật khẩu đã bị bẻ khóa bằng cách sử dụng lệnh sau:
+
+```bash
+hashcat -m 5600 --show --outfile-format 2 /opt/pcredz/logs/NTLMv2.txt
+```
+
+![alt text](IMG/LAB3/LAB3.6/image-13.png)
+
+Các lựa chọn là:
+
+- `-m 5600`: Chế độ NetNTLMv2.
+
+- `--show`: Hiển thị kết quả.
+
+- `--outfile-format 2`: Định dạng đầu ra.
+
+- `hash.txt`: Tệp chứa các mã băm.
+
+## Phần kết luận
+
+Trong bài thực hành này, bạn đã tìm hiểu cách thực hiện một cuộc tấn công cấp độ mạng bằng Responder để thu được các hàm băm NTLMv2 và cách chúng ta có thể sử dụng John The Ripper để bẻ khóa các hàm băm này. Kỹ thuật này rất hữu ích cho các chuyên gia kiểm thử xâm nhập để phân biệt mật khẩu và sử dụng chúng để có được quyền truy cập sâu hơn vào môi trường mục tiêu.
+
+Chúng ta cũng đã thấy được tính linh hoạt của việc nghe lén gói tin. Chúng ta đã sử dụng tcpdump để thu thập thông tin xác thực, trích xuất mã băm và giải mã phản hồi/thử thách NTLMv2, cũng như giải mã các mã băm đó.
