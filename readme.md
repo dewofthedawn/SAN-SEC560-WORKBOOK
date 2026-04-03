@@ -4143,3 +4143,443 @@ exit
 
 Trong bài thực hành này, chúng ta đã chạy mô-đun `psexec` Metasploit, xem xét các tùy chọn cấu hình và phân tích các hoạt động từng bước của nó để giành quyền thực thi mã trên máy mục tiêu. Chúng ta đã sử dụng payload để `psexec` chạy `meterpreter/reverse_tcp` trên máy mục tiêu với `SYSTEM` quyền cục bộ, sau đó sử dụng quyền này để chiếm thêm các quyền khác và thu thập các mã băm thông qua mô-đun `post/windows/gather/smart_hashdump`. Ngoài ra, chúng ta có thể thu thập thông tin đăng nhập dạng văn bản gốc của người dùng đã đăng nhập bằng Mimikatz (kiwi). Mỗi khả năng này đều rất hữu ích trong một bài kiểm thử xâm nhập.
 
+# Lab 3.5. Giải mã bằng John the Ripper và Hashcat
+
+## Mục tiêu
+
+- Sử dụng John the Ripper để giải mã một số hash từ Windows và Linux.
+
+- Hướng dẫn sử dụng Hashcat để giải mã mật khẩu từ hệ thống Windows và Linux.
+
+- Để phân tích cách các tập tin quy tắc của Hashcat có thể giúp giải mã băm thành công hơn.
+
+- Để so sánh hiệu năng của Hashcat với hiệu năng của John the Ripper.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+Trong trường hợp bạn đã chạy bài thực hành này trước đây, hãy cùng nhau dọn dẹp một chút. Chúng ta hãy xóa các tệp pot của JtR và Hashcat.
+
+```bash
+rm /home/sec560/.local/share/hashcat/hashcat.potfile
+rm ~/.john/john.pot
+# Lệnh này không có đầu ra. Nếu các tập tin đã được dọn dẹp, bạn sẽ nhận được thông báo lỗi. Lỗi đó là bình thường.
+```
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Benchmark John
+
+John the Ripper (John) đã được cài đặt trong máy ảo của bạn. Trước tiên, hãy khởi chạy John ở chế độ thử nghiệm và kiểm tra một vài loại hàm băm khác nhau.
+
+Hãy xem John có thể bẻ khóa mật khẩu LM nhanh đến mức nào.
+
+```bash
+john --test --format=lm
+```
+
+![alt text](IMG/LAB3/LAB3.5/image.png)
+
+> Tốc độ thực tế của bạn sẽ khác với tốc độ hiển thị ở trên.
+
+Hãy xem John có thể giải mã mật khẩu `md5crypt` nhanh đến mức nào.
+
+```bash
+john --test --format=md5crypt
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-1.png)
+
+Chúng ta sẽ so sánh tốc độ này với Hashcat ở phần sau của bài thực hành này.
+
+### 2. Giải mã băm Windows cùng John (LM)
+
+Bây giờ chúng ta sẽ giải mã một số mã băm trong một `web01.hashes` tệp tin nằm trong thư mục labs của máy ảo Slingshot trong khóa học. Đây là thông tin tương tự mà chúng ta đã lấy được từ hệ thống Web01 (10.130.10.25) trong bài thực hành `Trích xuất mật khẩu`.
+
+Theo mặc định, John sẽ tập trung vào các hàm băm LM .
+
+Hãy cho John chống lại với `~/labs/web01.hashes`.
+
+![alt text](IMG/LAB3/LAB3.5/image-2.png)
+
+![alt text](IMG/LAB3/LAB3.5/image-3.png)
+
+John đã phát hiện ra mã băm là LM (LANMAN). Lưu ý rằng mật khẩu mà John đã bẻ khóa được viết `HOA TOÀN BỘ`. Đó là vì LM chuyển đổi mọi thứ thành chữ hoa. Ngoài ra, hãy lưu ý cách John bẻ khóa bảy ký tự đầu tiên của mật khẩu LM một cách riêng biệt với bảy ký tự tiếp theo, coi mỗi nửa như một mật khẩu khác nhau. Nửa đầu của mật khẩu được biểu thị bằng username:1, và nửa sau là username:2.
+
+Bạn sẽ nhận thấy rằng mật khẩu của hầu hết các tài khoản (hãy xem `dmckenzie` và `ckhan`) đều có mật khẩu LM trống. Tuy nhiên, người dùng đó vberrylại có một mã băm LM, và John đã giải mã được nó! Không có người dùng `vberry:1` hoặc `vberry:2`, mà chỉ có phần đầu tiên và phần thứ hai của mật khẩu. Kết hợp 1 và 2 để có được mật khẩu LM đầy đủ, `MIMIGOTKNENZ2G`. Mật khẩu này khá ngẫu nhiên và rất khó có khả năng chúng ta đoán được, nhưng vì cơ chế lưu trữ của LM rất kém, chúng ta có thể giải mã mã băm này. Hãy nhớ rằng thuật toán băm LM chuyển đổi mật khẩu thành chữ hoa, sau đó chia nó thành hai phần. Điều này cho phép chúng ta giải mã một nửa mật khẩu mỗi lần, và chúng ta không cần phải lo lắng về chữ hoa chữ thường!
+
+Nhấn phím mũi tên lên và chạy lại lệnh. Lưu ý rằng ở lần chạy thứ hai này, các mật khẩu tương tự không bị bẻ khóa!
+
+```bash
+john ~/labs/web01.hashes
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-4.png)
+
+Nếu John đã bẻ khóa được mật khẩu, hệ thống sẽ không cố gắng bẻ khóa mật khẩu đó lần nữa.
+
+Để xem toàn bộ mật khẩu (ghép hai phần gồm bảy ký tự của mật khẩu LM lại với nhau) mà John đã bẻ khóa được, chúng ta có thể chạy nó với tùy chọn `--show`:
+
+```bash
+john ~/labs/web01.hashes --show
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-5.png)
+
+Lệnh này tìm kiếm `john.pot` các mã băm bên trong tệp `web01.hashes` để có thể in ra mật khẩu đầy đủ liên kết với người dùng. Hãy cùng xem tệp pot.
+
+Sử dụng `cat` để kiểm tra tập tin `~/.john/john.pot`.
+
+```bash
+cat ~/.john/john.pot
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-6.png)
+
+Trên các hệ thống hiện đại, việc có các hàm băm mật khẩu LM rất hiếm gặp. Tuy nhiên, nó vẫn thường xuyên xảy ra trên các tên miền có tài khoản cũ. Theo kinh nghiệm của tác giả, điều này xảy ra trong khoảng 15% môi trường. Đây vẫn là một hình thức tấn công khả thi!
+
+Hãy sử dụng John và giải mã băm NT bằng cách sử dụng tùy chọn `--format=nt` đó.
+
+```bash
+john --format=nt ~/labs/web01.hashes
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-7.png)
+
+Nhấn `CTRL-C` hoặc `q` để dừng quá trình bẻ khóa. Bạn sẽ thấy quá trình bẻ khóa diễn ra chậm hơn ở đây. Các mật khẩu trên hệ thống mục tiêu không có trong danh sách mật khẩu mặc định của John. Hãy nhớ rằng, với định dạng LM, mật khẩu được chuyển đổi thành chữ hoa và tách ra. Định dạng NT không chuyển đổi mật khẩu cũng như không tách mật khẩu. Điều này có nghĩa là mật khẩu khó bẻ khóa hơn.
+
+Trong trường hợp này, chúng ta có cả mã băm mật khẩu LM và NT. Mã băm LM đã được giải mã rất nhanh và cho chúng ta mật khẩu viết hoa. Chúng ta có thể sử dụng mật khẩu viết hoa này cùng với mật khẩu NT để khôi phục mật khẩu gốc. Nếu xem lại, chúng ta có thể thấy rằng chúng ta đã giải mã được mã băm LM `vberry` nhưng chưa giải mã được mã băm NT. Chúng ta có thể sử dụng một công cụ trong Metasploit để giúp hoàn tất quá trình giải mã để có được mật khẩu phân biệt chữ hoa chữ thường. Trước tiên, hãy xem dòng `vberry` từ tệp tin `web01.hashes`.
+
+![alt text](IMG/LAB3/LAB3.5/image-8.png)
+
+Như các bạn đã nhớ, mã băm đầu tiên là mã băm LM và mã băm thứ hai là mã băm NT. Chúng ta sẽ sử dụng mật khẩu viết hoa so với mã băm NT để lấy mật khẩu phân biệt chữ hoa chữ thường.
+
+Phiên bản Jumbo của JtR bao gồm các tính năng bổ sung, trong đó có `--loopback` tùy chọn này. Tùy chọn này cho phép chúng ta sử dụng tệp pot (nơi lưu trữ các mã băm/mật khẩu đã được bẻ khóa) làm đầu vào cho công cụ bẻ khóa của mình.
+
+```bash
+john --format=nt --loopback ~/labs/web01.hashes
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-9.png)
+
+Chúng tôi đã lấy được mã băm LM, giải mã nó, sau đó sử dụng mã băm không phân biệt chữ hoa chữ thường để giải mã mã băm NT phân biệt chữ hoa chữ thường! Rất khó có khả năng chúng tôi có thể đoán được toàn bộ mã băm phân biệt chữ hoa chữ thường `mImiGOTKnENZ2g`, nhưng cơ chế lưu trữ LM đã làm cho việc này trở nên dễ dàng đến mức gần như hiển nhiên!
+
+### 3. Giải mã mật khẩu cùng John và Wordlist
+
+Chúng ta không còn mã băm LM nào nữa, vì vậy bây giờ chúng ta cần tấn công mã băm NT phân biệt chữ hoa chữ thường. Hãy sử dụng danh sách mật khẩu `rockyou.txt`. Danh sách này được lấy từ vụ tấn công trang web RockYou năm 2009. Trang web này lưu trữ mật khẩu không được mã hóa, ở dạng văn bản rõ ràng mà bất kỳ ai cũng có thể đọc được. Chúng ta sẽ sử dụng danh sách này vì chúng ta biết rằng hàng triệu người dùng đã sử dụng những mật khẩu này trong quá khứ. Một số người dùng có thể chọn (hoặc sử dụng lại) mật khẩu từ danh sách này. Danh sách RockYou nằm ở địa chỉ `/opt/passwords/rockyou.txt`, và chúng ta có thể sử dụng nó với tùy chọn `--wordlist`.
+
+```bash
+john --format=nt --wordlist=/opt/passwords/rockyou.txt ~/labs/web01.hashes
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-10.png)
+
+Chúng ta thấy ở đây có 10 người dùng có mật khẩu nằm trong tập tin này!
+
+### 4. Giải mã mật khẩu Linux cùng John
+
+Bây giờ hãy thử bẻ khóa một số mật khẩu Linux. Chúng tôi đã lưu tệp `/etc/shadow` từ `Web10 (10.130.10.10)` dưới dạng `~/labs/web10.shadow`.
+
+Hãy chạy John so sánh với tập tin shadow.
+
+```bash
+john ~/labs/web10.shadow
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-11.png)
+
+Hãy để nó chạy trong một phút, sau đó nhấn `CTRL-C` hoặc `q` để thoát. John sẽ không thể bẻ khóa mật khẩu này dựa trên danh sách mặc định. Chúng ta hãy sử dụng danh sách RockYou một lần nữa.
+
+```bash
+john ~/labs/web10.shadow --wordlist=/opt/passwords/rockyou.txt
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-12.png)
+
+Có lẽ bạn còn nhớ John đã nhanh chóng quét qua danh sách RockYou bằng các hàm băm NT như thế nào. Bạn sẽ nhận thấy rằng thuật toán `sha512crypt` băm này mất nhiều thời gian hơn để giải mã. Thuật toán này thêm một chuỗi muối (salt) và nhiều vòng băm, không giống như NT không có muối và chỉ có một vòng băm.
+
+Nếu bạn để chương trình này chạy đủ lâu, bạn sẽ bẻ khóa được 11 mật khẩu, nhưng hiện tại thì...
+
+```bash
+Press q or CTRL-c to exit John
+```
+
+### 5. Những điều cơ bản về Hashcat
+
+Hãy gọi Hashcat với tùy chọn `--help` để xem tài liệu tích hợp sẵn của Hashcat. Vì tài liệu khá đồ sộ, chúng ta hãy chuyển hướng nó qua một hàm xử lý `less` để phân trang:
+
+```bash
+hashcat --help | less
+```
+
+Hãy xem qua các tùy chọn dòng lệnh của Hashcat — có RẤT NHIỀU tùy chọn ở đây. Trong bài thực hành này, chúng ta sẽ khám phá một số tùy chọn hữu ích nhất.
+
+Trong kết quả đầu ra, ta có thể thấy rằng Hashcat yêu cầu một tham số `-m` theo sau là một loại băm (`hash-type`), là một số được chọn từ hơn 275 loại băm mà chúng ta có thể giải mã. Chúng ta sẽ tìm hiểu một số loại băm cụ thể sau. Nhưng trước khi xem xét điều đó, hãy xem xét tùy chọn `-a` chế độ tấn công (attack mode), nghĩa là Hashcat sẽ sử dụng từ điển của nó như thế nào/có sử dụng hay không. Tùy chọn `-a` này hỗ trợ các giá trị sau:
+
+- `0`: Straight. Chế độ này sử dụng các từ điển như chúng xuất hiện trong từ điển, với các quy tắc được áp dụng cho chúng theo quy định của tùy chọn `-r` (nếu có). Ví dụ: `letmein` và `password`.
+
+- `1`: Combination. Chế độ này sẽ lấy từng từ trong từ điển và ghép nó với từng từ khác trong từ điển, về cơ bản là bình phương số lượng mật khẩu tiềm năng từ một tập tin từ. Nó cũng sẽ áp dụng các quy tắc được chỉ định bởi `-r` tùy chọn (nếu có) cho các từ kết hợp thu được. Ví dụ: `letmeinpassword` và `passwordletmein`.
+
+- `3`: Brute Force. Chế độ này thử tất cả các mật khẩu tiềm năng trong một không gian khóa nhất định, lặp qua tất cả các ký tự. Ví dụ: `0000`, `0001`, `0002`, v.v.
+
+- `6`: Hybrid + Mask. Chế độ này sử dụng từ điển nhưng sau đó thêm vào một thành phần tấn công vét cạn. Ví dụ: `letmein0000`, `password0000`, `letmein0001`, v.v.
+
+Trong bài thực hành này, chúng ta sẽ sử dụng hình thức `-a 0` tấn công đơn giản và phổ biến nhất. Sau này trong bài thực hành, chúng ta sẽ sử dụng tùy chọn `-r` để chỉ định các quy tắc thực hiện việc biến đổi từ ngữ dựa trên từ điển, đồng thời vẫn áp dụng kiểu tấn công mà chúng ta đã chọn `0`.
+
+Tiếp theo, chúng ta hãy tìm kiếm các số cụ thể liên kết với các loại hàm băm nhất định để có thể chỉ định loại nào cần sử dụng với tùy chọn `-m`. Chúng ta chỉ cần chuyển hướng đầu ra của lệnh trợ giúp của Hashcat grepđể tìm kiếm một số loại hàm băm phổ biến. Hãy bắt đầu bằng cách tìm kiếm các hàm băm `LANMAN`, viết tắt là `LM` bởi Hashcat:
+
+```bash
+hashcat --help | grep LM
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-13.png)
+
+Trong kết quả đầu ra, bạn sẽ thấy một dòng cho biết `3000 | LM`. điều này, cho thấy để giải mã các hàm băm LM, chúng ta gọi Hashcat với `-m 3000`. Chúng ta cũng có thể thấy các số mà Hashcat liên kết với NTLMv1 và NTLMv2 trong kết quả đầu ra của nó ở đây vì mỗi số đều khớp với LM mà chúng ta đã tìm kiếm bằng lệnh grep.
+
+Để xác định số loại băm cần thiết để bẻ khóa các băm MD5 Linux có thêm muối (còn được gọi là `md5crypt`), vui lòng chạy lệnh sau:
+
+```bash
+hashcat --help | grep md5crypt
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-14.png)
+
+Ở đây, chúng ta thấy rằng chúng ta nên sử dụng Hashcat `-m 500` để giải mã các hàm băm này, vốn được liên kết với "Hệ điều hành" .
+
+Cuối cùng, hãy cùng tìm hiểu cách xác định hàm băm SHA512 .
+
+```bash
+hashcat --help | grep sha512
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-15.png)
+
+Ta có thể thấy rằng đối với mật khẩu SHA512 trong hệ điều hành, Hashcat sử dụng `-m 1800`.
+
+Bây giờ chúng ta hãy thực hiện một số bài kiểm tra hiệu năng, bắt đầu với `-m 3000`, dành cho các hàm băm LM . Lưu ý rằng chúng ta sẽ gọi Hashcat với `-w` 3 cờ, có nghĩa là chúng ta muốn Hồ sơ khối lượng công việc (`-w`) số 3. Các tùy chọn khác nhau cho `-w` bao gồm:
+
+- `1`: Mức độ ảnh hưởng thấp. Tác động tối thiểu đến hiệu năng giao diện người dùng và tiêu thụ điện năng thấp.
+
+- `2`: Mặc định. Có tác động đáng kể đến giao diện người dùng và mức tiêu thụ điện năng.
+
+- `3`: Cao. Tiêu thụ điện năng cao và giao diện người dùng có thể bị treo.
+
+- `4`: Ác mộng. Mức tiêu thụ điện năng khủng khiếp và máy chủ không có giao diện người dùng vì giao diện đồ họa không đủ CPU hoặc GPU để xử lý.
+
+Trong bài thực hành này, chúng ta sẽ sử dụng `-w 3` vì thường có thể đạt được hiệu suất cao hơn khoảng 30%, và giao diện người dùng đồ họa (GUI) sẽ đủ nhanh để chúng ta tiến hành thí nghiệm.
+
+Tiếp theo, chúng ta hãy thực hiện một số phép đo hiệu năng của Hashcat đối với các thuật toán băm thông dụng.
+
+Chúng ta sẽ bắt đầu với một bài kiểm tra hiệu năng để xem khả năng bẻ khóa loại băm `-m 3000`, còn được gọi là LM hoặc LANMAN .
+
+```bash
+hashcat -w 3 --benchmark -m 3000
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-17.png)
+
+Ở đây bạn có thể thấy hiệu suất tính bằng kilohashes mỗi giây (`kH/s`). Vui lòng ghi lại tốc độ bẻ khóa LM trên hệ thống của bạn bằng Hashcat:
+
+Tiếp theo, chúng ta hãy xem xét hiệu năng của việc bẻ khóa các hàm băm MD5 có thêm muối (`md5crypt`) bằng cách chạy lệnh sau:
+
+![alt text](IMG/LAB3/LAB3.5/image-18.png)
+
+Vui lòng ghi lại tốc độ bẻ khóa md5crypt trên hệ thống của bạn bằng Hashcat:
+
+Cuối cùng, hãy cùng xem xét các đặc điểm hiệu năng của sha512crypt, các hàm băm `$6$` được liên kết với một số máy Linux:
+
+
+```bash
+hashcat -w 3 --benchmark -m 1800
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-19.png)
+
+Vui lòng ghi lại tốc độ bẻ khóa sha512crypt trên hệ thống của bạn bằng Hashcat:
+
+Hãy để ý rằng thuật toán bẻ khóa LM có hiệu suất cao nhất, tiếp theo là md5crypt , và sha512crypt còn chậm hơn nữa. Vui lòng so sánh thời gian thực hiện của LM và md5crypt với thời gian bạn đã ghi lại cho John the Ripper. Tùy thuộc vào phần cứng của bạn, bạn có thể thấy John nhanh hơn hoặc Hashcat nhanh hơn. Điều quan trọng ở đây là sử dụng thuật toán nào nhanh nhất trên phần cứng hiện có của bạn cho các loại hàm băm cụ thể mà bạn gặp phải trong quá trình kiểm thử xâm nhập.
+
+### 6: Bẻ khóa bằng Hashcat
+
+Chúng ta sẽ sử dụng Hashcat để bẻ khóa mật khẩu từ tệp `web01.hashes` trong thư mục `labs` và sử dụng danh sách mật khẩu RockYou. Mặc dù chúng ta có thể tấn công các hàm băm LM bằng hashcat (`-m 3000`), nhưng chúng ta sẽ tập trung vào các hàm băm NT .
+
+Gọi Hashcat với Hồ sơ tải là 3 (`-w 3`) để sử dụng càng nhiều sức mạnh tính toán càng tốt trong khi vẫn giữ được một số quyền truy cập GUI, với chế độ tấn công không (`-a 0`) để sử dụng từ điển của chúng ta nguyên trạng để bẻ khóa loại băm 1000, là NT (`-m 1000`). Sau đó, chúng ta sẽ chỉ định tệp `web01.hashes` cần bẻ khóa và `rockyou.txt` làm từ điển của chúng ta, như sau.
+
+```bash
+hashcat -w 3 -a 0 -m 1000 ~/labs/web01.hashes /opt/passwords/rockyou.txt
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-20.png)
+
+Như các bạn thấy, chúng ta đã bẻ khóa được 10 mật khẩu!
+
+Bây giờ chúng ta hãy cùng xem xét các quy tắc có sẵn trong Hashcat.
+
+```bash
+ls /usr/local/share/doc/hashcat/rules/
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-21.png)
+
+Như bạn thấy, Hashcat có rất nhiều tập tin quy tắc khác nhau. Hãy cùng xem một trong những tập tin hữu ích nhất `best64.rule`:
+
+```bash
+head -n 30 /usr/local/share/doc/hashcat/rules/best64.rule
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-22.png)
+
+Khoảng trắng phía trên bị bỏ qua, nhưng nó giúp văn bản dễ đọc hơn. Điều đó `$0 $0` có nghĩa là `password00..`.
+
+Trong tập tin quy tắc này, bạn thấy rằng mỗi từ được thử như nguyên mẫu (`:`), đảo ngược (`r`), và viết hoa toàn bộ (`u`), và kiểu chữ của ký tự đầu tiên được đảo ngược (`T0`). Ngoài ra, mỗi từ (`$`) được lấy và thêm một chữ số vào cuối (`$0`lên đến `$9`). Sau đó, mỗi từ có chữ số được lặp lại hai lần (`$0 $0`), lưu ý rằng khoảng trắng bị bỏ qua. Các quy tắc trong tập tin này còn tiếp tục và thường khá thông minh. Hãy áp dụng chúng vào nỗ lực bẻ khóa của chúng ta với tùy -rchọn chỉ định tập tin quy tắc này:
+
+```bash
+hashcat -w 3 -a 0 -m 1000 ~/labs/web01.hashes /opt/passwords/rockyou.txt -r /usr/local/share/doc/hashcat/rules/best64.rule
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-23.png)
+
+> Chậm: Quá trình này có thể mất vài phút. Sau khi nhận được mật khẩu, bạn có thể nhấn nút qthoát và tiếp tục.
+
+Công cụ này đã tìm thấy thêm hai mật khẩu nữa! Hãy chú ý trong kết quả ở trên rằng Hashcat đã loại bỏ 11 mã băm vì nó đã giải mã được chúng.
+
+Khi quá trình đó hoàn tất, chúng ta hãy xem kết quả:
+
+```bash
+hashcat -m 1000 --username --show --outfile-format 2 ~/labs/web01.hashes
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-24.png)
+
+### 7. Hashcat và Masking
+
+Các quy tắc được cung cấp bởi Hashcat rất tuyệt vời, nhưng chúng ta có thể tùy chỉnh chúng hơn nữa. Nếu muốn thêm tất cả các số có hai chữ số có thể, chúng ta có thể sử dụng `?d?d`. Nếu bạn nhìn kỹ vào `best64.rule`, bạn sẽ nhận thấy nó không sử dụng tất cả các số có hai chữ số. Hãy thực hiện một cuộc tấn công mặt nạ sử dụng tất cả các số có hai chữ số. Ngoài ra, hãy sử dụng một từ điển tiếng Anh làm danh sách mật khẩu cơ sở của chúng ta. Từ điển này nằm ở `/opt/passwords/english-dictionary-capitalized.txt`. Chúng ta sẽ thêm (thêm vào cuối mật khẩu dự đoán) bằng cách sử dụng chế độ `6` (chế độ `7` là prepend).
+
+```bash
+hashcat -w 3 -a 6 -m 1000 ~/labs/web01.hashes /opt/passwords/english-dictionary-capitalized.txt ?d?d
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-25.png)
+
+Nếu bạn đã từng tìm hiểu về mật khẩu, bạn có thể nhận thấy rằng mọi người thường chọn một từ, thêm một số, rồi đến một ký tự đặc biệt. Hãy sử dụng điều này như một lớp ngụy trang!
+
+```bash
+hashcat -w 3 -a 6 -m 1000 ~/labs/web01.hashes /opt/passwords/english-dictionary-capitalized.txt ?d?s
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-26.png)
+
+Chúng ta hãy thực hiện thêm một lượt nữa, nhưng lần này hãy sử dụng rockyou.txt.
+
+```bash
+hashcat -w 3 -a 6 -m 1000 ~/labs/web01.hashes /opt/passwords/rockyou.txt ?d?s
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-27.png)
+
+Hãy cùng xem lại tất cả các mật khẩu mà chúng ta đã bẻ khóa được.
+
+```bash
+hashcat -m 1000 --username --show --outfile-format 2 ~/labs/web01.hashes
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-28.png)
+
+### 8: Bẻ khóa mật khẩu Linux bằng Hashcat
+
+Hãy cùng nhau giải mã các hàm băm từ web10 bằng Hashcat, cụ thể là `$6$` các hàm băm liên quan đến sha512crypt.
+
+Như chúng ta đã đề cập trước đó trong khóa học này, việc lấy những mật khẩu đã bị bẻ khóa và thêm chúng vào một tệp từ điển có thể rất hữu ích, để chúng ta không cần phải áp dụng lại các quy tắc biến đổi từ trước khi tìm lại mật khẩu khi nó được băm bằng một thuật toán khác. Nói cách khác, chúng ta đã biến đổi một số từ và bẻ khóa mã băm của chúng, vậy tại sao phải biến đổi những từ đó một lần nữa nếu chúng ta gặp cùng một mật khẩu với thuật toán băm khác? Chúng ta sẽ hiệu quả hơn nếu lấy những từ đã bị biến đổi và thêm chúng vào tệp danh sách từ của mình.
+
+Hãy lưu tất cả các mật khẩu mà chúng ta đã bẻ khóa được từ hệ thống Windows vào một tệp. Chúng ta sẽ sử dụng lệnh tương tự như trên, nhưng vì không cần tên người dùng nên chúng ta sẽ bỏ qua tùy chọn `--username` đó.
+
+```bash
+hashcat -m 1000 --show --outfile-format 2 ~/labs/web01.hashes | tee /tmp/passwords.txt
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-29.png)
+
+> Nếu bạn chưa giải mã được tất cả các mật khẩu.
+> Một số thao tác bẻ khóa ở trên có thể mất khá nhiều thời gian, và chúng tôi đã khuyên bạn nên dừng quá trình bẻ khóa để tiết kiệm thời gian. Để tạo danh sách, hãy chạy các lệnh sau. Sao chép các lệnh bên dưới và dán chúng vào cửa sổ dòng lệnh của bạn.
+
+```bash
+echo 'Tibbetts3' > /tmp/passwords.txt
+echo 'Oozle11' >> /tmp/passwords.txt
+echo 'KAMTPS20!!tim' >> /tmp/passwords.txt
+echo 'Patrique2238' >> /tmp/passwords.txt
+echo 'Packardbell350' >> /tmp/passwords.txt
+echo '2soWht!a' >> /tmp/passwords.txt
+echo 'Angels100%' >> /tmp/passwords.txt
+echo 'Chirmol01' >> /tmp/passwords.txt
+echo 'BHLMSTz2' >> /tmp/passwords.txt
+echo 'Warrior07' >> /tmp/passwords.txt
+echo 'Hemocytogenesis42' >> /tmp/passwords.txt
+echo 'Alphabet23' >> /tmp/passwords.txt
+echo 'Smitten77' >> /tmp/passwords.txt
+echo 'Civilness12' >> /tmp/passwords.txt
+echo 'Gathering81' >> /tmp/passwords.txt
+echo 'Antitoxin7!' >> /tmp/passwords.txt
+echo 'Coronet7#' >> /tmp/passwords.txt
+echo 'Metallica6&' >> /tmp/passwords.txt
+```
+
+Giờ hãy dùng Hashcat để giải mã một số hash của Linux!
+
+```bash
+hashcat -w 3 -a 0 -m 1800 ~/labs/web10.shadow /tmp/passwords.txt -r /usr/local/share/doc/hashcat/rules/best64.rule
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-31.png)
+
+> Ngoại lệ độ dài mã thông báo: Bạn sẽ thấy rất nhiều dòng báo lỗi "Token length exception" như thế này:
+>
+> `Hashfile '/home/sec560/labs/web10.shadow' on line 1 (root:*:18960:0:99999:7:::): Token length exception`. 
+>
+> Những dòng này không khớp với sha512cryptđịnh dạng vì các tài khoản không được thiết lập mật khẩu. Bạn có thể bỏ qua những cảnh báo này một cách an toàn.
+
+Các phương án chúng tôi đã sử dụng là:
+
+- `-w 3`: Khối lượng công việc "Cao".
+
+- `-a 0`: Chế độ "thẳng", sử dụng từ điển mà không thay đổi gì.
+
+- `-m 1800`: Chế độ băm của "sha512crypt 6 , SHA512 (Unix)"
+
+- `~/labs/web10.shadow`: Tệp chứa các mã băm.
+
+- `/tmp/passwords.txt`: Danh sách từ.
+
+- `-r /usr/local/share/doc/hashcat/rules/best64.rule`: Tệp quy tắc Mangling
+
+Bạn có thể nhấn phím `s` để xem trạng thái, trạng thái này cũng sẽ được hiển thị trên màn hình định kỳ. Khi quá trình chạy hoàn tất, hãy cùng xem kết quả:
+
+```bash
+hashcat -m 1800 --username --show --outfile-format 2 ~/labs/web10.shadow
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-32.png)
+
+Chúng tôi phát hiện ra rằng `abates` sử dụng cùng một mật khẩu trên cả hệ thống Windows và Linux.
+
+Người dùng `wrobinson` sử dụng mật khẩu tương tự trên cả hai hệ thống. Người dùng đã chọn mật khẩu đó `Patrique2238` trên Windows và `Patrique223877` trên Linux.
+
+Hãy cùng xem tệp potfile của hashcat:
+
+```bash
+cat ~/.local/share/hashcat/hashcat.potfile
+```
+
+![alt text](IMG/LAB3/LAB3.5/image-33.png)
+
+Trong tập tin này, bạn sẽ thấy tất cả các mã băm và mật khẩu mà bạn đã giải mã được!
+
+Chúng ta vừa thấy cách tạo ra các từ điển chuyên biệt về tên người dùng và mật khẩu đã bị bẻ khóa để nâng cao tỷ lệ thành công của Hashcat trong việc bẻ khóa mật khẩu.
+
+## Phần kết luận
+
+Trong bài thực hành này, chúng tôi đã sử dụng John để bẻ khóa mật khẩu Windows và Linux, và chúng tôi đã phân tích john.pottệp tin để xem John lưu trữ các mật khẩu đã được bẻ khóa thành công như thế nào. Mỗi kỹ thuật này đều hữu ích cho các chuyên gia kiểm thử xâm nhập để phân biệt mật khẩu và sử dụng chúng để có được quyền truy cập sâu hơn vào môi trường mục tiêu.
+
+Ngoài ra, chúng tôi đã sử dụng Hashcat để bẻ khóa mật khẩu băm trên Windows và Linux, phân tích một số đặc điểm hiệu năng của Hashcat và so sánh chúng với John the Ripper. Đối với một bài kiểm thử xâm nhập, người kiểm thử nên đánh giá hiệu năng của John the Ripper và Hashcat trên phần cứng hiện có và xác định công cụ nào sẽ bẻ khóa mật khẩu nhanh hơn đối với các loại băm cụ thể gặp phải trong bài kiểm thử. Chúng tôi cũng đã xem xét cách áp dụng các quy tắc biến đổi từ ngữ vào các lần chạy Hashcat và cách tận dụng tên người dùng và mật khẩu đã bị bẻ khóa để tạo ra các từ điển mật khẩu tiềm năng mới cho Hashcat. Mỗi kỹ thuật này đều rất hữu ích trong kiểm thử xâm nhập thực tế.
